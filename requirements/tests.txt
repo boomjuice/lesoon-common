@@ -1,0 +1,4 @@
+-r core.txt
+
+pytest
+pytest-cov

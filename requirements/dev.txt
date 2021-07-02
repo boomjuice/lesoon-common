@@ -1,0 +1,5 @@
+-r core.txt
+
+tox
+pre-commit
+devpi
