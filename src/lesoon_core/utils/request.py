@@ -3,8 +3,9 @@ from functools import wraps
 from typing import Callable
 
 from sqlalchemy.orm.query import Query
-from src.lesoon_core.parse.request import parse_request
-from src.lesoon_core.parse.sqlalchemy import parse_multi_condition
+
+from ..parse.request import parse_request
+from ..parse.sqlalchemy import parse_multi_condition
 
 
 def inject_sqla_condition(func: Callable[..., Query]) -> Callable[..., Query]:

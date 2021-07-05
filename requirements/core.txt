@@ -4,3 +4,4 @@ flask-marshmallow>=0.14.0
 flask-caching>=1.10.1
 marshmallow-sqlalchemy>=0.26.1
 sentry-sdk[flask]
+pymysql>=1.0.2
