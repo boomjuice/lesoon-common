@@ -1,6 +1,7 @@
 """ 响应体模块. """
-import typing
+from typing import Any
 from typing import NamedTuple
+from typing import Union
 
 from flask import current_app as app
 from werkzeug.exceptions import HTTPException
@@ -25,27 +26,29 @@ class Response:
             if not hasattr(self, k):
                 setattr(self, k, v)
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return self.__dict__
 
 
-def success_response(result: typing.Union[typing.Dict, typing.List] = None, **kwargs):
+def success_response(result: Any = None, **kwargs) -> dict:
     resp = Response(code=ResponseCode.success, **kwargs)
     if result:
         if isinstance(result, list):
-            resp.rows = result
+            resp.rows = result  # type:ignore
         elif isinstance(result, dict):
-            resp.data = result
+            resp.data = result  # type:ignore
         else:
-            resp.data = result
+            resp.data = result  # type:ignore
     return resp.to_dict()
 
 
-def error_response(code: Code, **kwargs):
+def error_response(code: Code, **kwargs) -> dict:
+    if not code:
+        code = ResponseCode.error
     return Response(code=code, solution=code.solution, **kwargs).to_dict()
 
 
-def handle_exception(error: Exception):
+def handle_exception(error: Exception) -> Union[HTTPException, dict]:
     if isinstance(error, HTTPException):
         return error
     app.logger.exception(error)

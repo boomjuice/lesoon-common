@@ -9,7 +9,7 @@ from ..extensions import db
 Model = db.Model
 
 
-class IdModel(Model):
+class IdModel(Model):  # type:ignore
     __abstract__ = True
     id = Column(BIGINT(20), primary_key=True, comment="ID")
 

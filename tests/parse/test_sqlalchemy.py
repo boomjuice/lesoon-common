@@ -1,34 +1,14 @@
 import pytest
 from sqlalchemy.orm.util import aliased
 from src.lesoon_core.exceptions import ParseError
-from src.lesoon_core.parse.request import extract_sort_arg
-from src.lesoon_core.parse.request import extract_where_arg
+from src.lesoon_core.parse.sqlalchemy import parse_filter
 from src.lesoon_core.parse.sqlalchemy import parse_prefix_alias
+from src.lesoon_core.parse.sqlalchemy import parse_related_models
 from src.lesoon_core.parse.sqlalchemy import parse_sort
 from src.lesoon_core.parse.sqlalchemy import parse_suffix_operation
 from src.lesoon_core.parse.sqlalchemy import sqla_op
-
-
-class TestReqParser:
-    def test_extract_sort_arg_str(self):
-        sort = "created_at,-name"
-        assert extract_sort_arg(sort) == [["created_at"], ["name", -1]]
-
-    def test_extract_sort_arg_list(self):
-        sort = '[["created_at"], ["name", -1]]'
-        assert extract_sort_arg(sort) == [["created_at"], ["name", -1]]
-
-    def test_extract_sort_arg_null(self):
-        sort = ""
-        assert extract_sort_arg(sort) is None
-
-    def test_extract_where_arg_dictionary(self):
-        where = "{'id':1}"
-        assert extract_where_arg(where) == {"id": 1}
-
-    def test_extract_where_arg_null(self):
-        where = ""
-        assert extract_where_arg(where) is None
+from tests.models import User
+from tests.models import UserExt
 
 
 class TestSQLParser:
@@ -36,76 +16,104 @@ class TestSQLParser:
     请求参数解析成sqlalchemy语法
     """
 
-    def test_wrong_attribute(self, User):
+    @classmethod
+    @pytest.fixture(autouse=True)
+    def setup_class(cls, db):
+        pass
+
+    def test_wrong_attribute(self):
         with pytest.raises(AttributeError):
             parse_suffix_operation("a", 1, User)
 
-    def test_wrong_operation(self, User):
+    def test_wrong_operation(self):
         with pytest.raises(ParseError):
             parse_suffix_operation("login_name_test", 1, User)
 
-    def test_eq(self, User):
+    def test_operation_no_suffix(self):
+        expected_expression = sqla_op.eq(User.status, "1")
+        r = parse_suffix_operation("status", "1", User)
+        assert expected_expression.compare(r) is True
+
+    def test_operation_eq(self):
         expected_expression = sqla_op.eq(User.login_name, "john")
         r = parse_suffix_operation("login_name_eq", "john", User)
         assert expected_expression.compare(r) is True
 
-    def test_gt(self, User):
+    def test_operation_gt(self):
         expected_expression = sqla_op.gt(User.status, 1)
         r = parse_suffix_operation("status_gt", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_gte(self, User):
+    def test_operation_gte(self):
         expected_expression = sqla_op.ge(User.status, 1)
         r = parse_suffix_operation("status_gte", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_lt(self, User):
+    def test_operation_lt(self):
         expected_expression = sqla_op.lt(User.status, 1)
         r = parse_suffix_operation("status_lt", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_lte(self, User):
+    def test_operation_lte(self):
         expected_expression = sqla_op.le(User.status, 1)
         r = parse_suffix_operation("status_lte", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_not_eq(self, User):
+    def test_operation_not_eq(self):
         expected_expression = sqla_op.ne(User.status, 1)
         r = parse_suffix_operation("status_ne", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_like(self, User):
+    def test_operation_like(self):
         expected_expression = User.status.like("%1%")
         r = parse_suffix_operation("status_like", "%1%", User)
         assert expected_expression.compare(r) is True
 
-    def test_in(self, User):
+    def test_operation_in(self):
         expected_expression = User.status.in_(["1", "2", "3"])
         r = parse_suffix_operation("status_in", "1,2,3", User)
         assert expected_expression.compare(r) is True
 
-    def test_parse_alias_match(self, User):
+    def test_filter_null(self):
+        r = parse_filter({}, User)
+        assert type(r) == list
+        assert len(r) == 0
+
+    def test_parse_alias_match(self):
         a = aliased(User, name="a")
-        r = parse_prefix_alias(a, "a.id")
+        r = parse_prefix_alias("a.id", a)
         assert r == "id"
 
-    def test_parse_alias_not_match(self, User):
+    def test_parse_alias_not_match(self):
         a = aliased(User, name="a")
-        r = parse_prefix_alias(a, "b.id")
+        r = parse_prefix_alias("b.id", a)
         assert r is None
 
-    def test_parse_alias_invalid_col(self, User):
+    def test_parse_alias_invalid_col(self):
         with pytest.raises(ParseError):
             a = aliased(User, name="a")
-            parse_prefix_alias(a, "a.b.c")
+            parse_prefix_alias("a.b.c", a)
 
-    def test_parse_sort_null(self, User):
+    def test_parse_sort_null(self):
         assert parse_sort([], User) == []
 
-    def test_parse_sort_standard(self, User):
+    def test_parse_sort_standard(self):
         sort_list = [["id"], ["status", -1]]
         expected_expression = [User.id, User.status.desc()]
         r = parse_sort(sort_list, User)
         # 字段无compare函数
         assert expected_expression[0] is r[0]
         assert expected_expression[1].compare(r[1])
+
+    def test_parse_related_models_single(self):
+        query = User.query
+        r = parse_related_models(query=query)
+        assert len(r) == 1
+        assert r.pop() == User
+
+    def test_parse_related_models_join(self):
+        query = User.query.join(UserExt, User.id == UserExt.user_id)
+        r = parse_related_models(query=query)
+        assert len(r) == 2
+        assert User in r
+        assert UserExt in r

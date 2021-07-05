@@ -2,7 +2,6 @@
 import logging
 
 import pytest
-from flask_sqlalchemy import SQLAlchemy
 from src.lesoon_core import LesoonFlask
 
 
@@ -24,19 +23,12 @@ def app():
 @pytest.fixture
 def db(app):
     """Create database for the tests."""
-    return SQLAlchemy(app=app)
+    _db = app.db
+    with app.app_context():
+        _db.create_all()
 
+    yield _db
 
-@pytest.fixture
-def User(db):
-    class User(db.Model):
-        __tablename__ = "user"
-        id = db.Column(db.Integer, primary_key=True)
-        login_name = db.Column(db.String, unique=True, nullable=False)
-        user_name = db.Column(db.String)
-        status = db.Column(db.Boolean, default=True)
-        create_time = db.Column(db.DateTime, default=db.func.now())
-
-    db.create_all()
-    yield User
-    db.drop_all()
+    # Explicitly close DB connection
+    _db.session.close()
+    _db.drop_all()

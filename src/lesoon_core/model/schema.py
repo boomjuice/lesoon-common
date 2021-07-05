@@ -1,4 +1,5 @@
 import marshmallow.fields as ma_fields
+from flask_sqlalchemy import Model
 from marshmallow import EXCLUDE
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy import SQLAlchemySchema
@@ -16,7 +17,7 @@ class SqlaCamelSchema(SQLAlchemySchema):
         field_obj.data_key = camelcase(field_obj.data_key or field_name)
 
     class Meta:
-        model = None
+        model: Model = None
         # 如果load的键没有匹配到定义的field时的操作,
         # RAISE: 如果存在未知key,引发ValiadationError
         # EXCLUDE: 忽略未知key

@@ -3,6 +3,10 @@
 """
 import ast
 import re
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import werkzeug.exceptions
 from flask import request
@@ -14,10 +18,10 @@ class ParsedRequest:
     """请求解析类."""
 
     # `where` = query string (?where), 默认为None.
-    where = None
+    where: Optional[Dict[str, str]] = None
 
     # `sort` = query string (?sort), 默认为None.
-    sort = None
+    sort: Optional[List[Tuple[str, int]]] = None
 
     # `page` = query string (?page), 默认为1.
     page = 1
@@ -26,7 +30,7 @@ class ParsedRequest:
     page_size = 0
 
     # `args`  = request.args, 默认为None.
-    args = None
+    args = None  # type:ignore
 
 
 def parse_request(payload=None) -> ParsedRequest:
@@ -59,7 +63,7 @@ def parse_request(payload=None) -> ParsedRequest:
     return r
 
 
-def extract_where_arg(where):
+def extract_where_arg(where) -> Optional[Dict[str, str]]:
     if where:
         try:
             return ast.literal_eval(where)
@@ -69,17 +73,17 @@ def extract_where_arg(where):
         return None
 
 
-def extract_sort_arg(sort):
+def extract_sort_arg(sort) -> Optional[List[Tuple[str, int]]]:
     if sort:
         if re.match(r"^[-,\w.]+$", sort):
             arg = []
             for s in sort.split(","):
                 if s.startswith("-"):
                     # 倒序
-                    arg.append([s[1:], -1])
+                    arg.append((s[1:], -1))
                 else:
                     # 正序
-                    arg.append([s])
+                    arg.append((s, 1))
             return arg
         else:
             return ast.literal_eval(sort)

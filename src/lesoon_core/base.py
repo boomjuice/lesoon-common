@@ -2,6 +2,7 @@ import logging
 import sys
 from collections import OrderedDict
 from datetime import timedelta
+from typing import Any
 
 from flask import Flask
 from flask_restful import Api
@@ -57,12 +58,19 @@ class LesoonFlask(Flask):
         }
     )
 
-    def __init__(self, import_name=__package__, extensions: dict = None, **kwargs):
+    def __init__(
+        self,
+        import_name=__package__,
+        extensions=None,
+        **kwargs,
+    ):
         super().__init__(import_name, **kwargs)
-        extensions = extensions or self.default_extensions
+        extensions: OrderedDict[str, Any] = (
+            extensions or self.__class__.default_extensions
+        )
         self._init_flask(extensions)
 
-    def _init_flask(self, extensions: dict):
+    def _init_flask(self, extensions):
         self._init_extensions(extensions=extensions)
         self._init_errorhandler()
         self._init_commands()
@@ -85,7 +93,7 @@ class LesoonFlask(Flask):
         if not self.logger.handlers:
             self.logger.addHandler(handler)
 
-    def add_extensions(self, extensions: dict):
+    def add_extensions(self, extensions):
         new_extensions = dict(extensions.items() - self.extensions.items())
         if new_extensions:
             self._init_extensions(extensions=extensions)
