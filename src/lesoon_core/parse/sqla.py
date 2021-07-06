@@ -1,4 +1,4 @@
-""" 解析模块.
+""" Sqlalchemy解析模块.
 将python对象解析成sqlalchemy对象以供查询
 """
 import operator as sqla_op

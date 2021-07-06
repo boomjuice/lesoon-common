@@ -1,12 +1,12 @@
 import pytest
 from sqlalchemy.orm.util import aliased
 from src.lesoon_core.exceptions import ParseError
-from src.lesoon_core.parse.sqlalchemy import parse_filter
-from src.lesoon_core.parse.sqlalchemy import parse_prefix_alias
-from src.lesoon_core.parse.sqlalchemy import parse_related_models
-from src.lesoon_core.parse.sqlalchemy import parse_sort
-from src.lesoon_core.parse.sqlalchemy import parse_suffix_operation
-from src.lesoon_core.parse.sqlalchemy import sqla_op
+from src.lesoon_core.parse.sqla import parse_filter
+from src.lesoon_core.parse.sqla import parse_prefix_alias
+from src.lesoon_core.parse.sqla import parse_related_models
+from src.lesoon_core.parse.sqla import parse_sort
+from src.lesoon_core.parse.sqla import parse_suffix_operation
+from src.lesoon_core.parse.sqla import sqla_op
 from tests.models import User
 from tests.models import UserExt
 
@@ -23,11 +23,11 @@ class TestSQLParser:
 
     def test_wrong_attribute(self):
         with pytest.raises(AttributeError):
-            parse_suffix_operation("a", 1, User)
+            parse_suffix_operation("a", "1", User)
 
     def test_wrong_operation(self):
         with pytest.raises(ParseError):
-            parse_suffix_operation("login_name_test", 1, User)
+            parse_suffix_operation("login_name_test", "1", User)
 
     def test_operation_no_suffix(self):
         expected_expression = sqla_op.eq(User.status, "1")

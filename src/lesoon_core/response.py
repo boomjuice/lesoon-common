@@ -14,8 +14,10 @@ class Code(NamedTuple):
 
 
 class ResponseCode:
-    success = Code(0, "success", "")
-    error = Code(1111, "error", "系统异常")
+    Success = Code(0, "success", "")
+    Error = Code(5001, "error", "系统异常")
+
+    MissParam = Code(2001, "参数缺失", "请检查传参是否完整")
 
 
 class Response:
@@ -31,7 +33,7 @@ class Response:
 
 
 def success_response(result: Any = None, **kwargs) -> dict:
-    resp = Response(code=ResponseCode.success, **kwargs)
+    resp = Response(code=ResponseCode.Success, **kwargs)
     if result:
         if isinstance(result, list):
             resp.rows = result  # type:ignore
@@ -44,7 +46,7 @@ def success_response(result: Any = None, **kwargs) -> dict:
 
 def error_response(code: Code, **kwargs) -> dict:
     if not code:
-        code = ResponseCode.error
+        code = ResponseCode.Error
     return Response(code=code, solution=code.solution, **kwargs).to_dict()
 
 
@@ -53,5 +55,5 @@ def handle_exception(error: Exception) -> Union[HTTPException, dict]:
         return error
     app.logger.exception(error)
     return error_response(
-        code=ResponseCode.error, msg=f"{error.__class__} : {str(error)}"
+        code=ResponseCode.Error, msg=f"{error.__class__} : {str(error)}"
     )

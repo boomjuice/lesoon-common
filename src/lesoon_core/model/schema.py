@@ -1,3 +1,4 @@
+""" 通用Schema基类模块. """
 import marshmallow.fields as ma_fields
 from flask_sqlalchemy import Model
 from marshmallow import EXCLUDE

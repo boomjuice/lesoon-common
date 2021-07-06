@@ -32,3 +32,8 @@ def db(app):
     # Explicitly close DB connection
     _db.session.close()
     _db.drop_all()
+
+
+@pytest.fixture
+def test_client(app):
+    return app.test_client()

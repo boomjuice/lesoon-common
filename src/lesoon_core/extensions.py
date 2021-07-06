@@ -1,4 +1,4 @@
-""" 拓展模块
+""" 默认拓展模块.
 在base.LessonFlask中初始化拓展
 """
 import sentry_sdk
@@ -7,7 +7,9 @@ from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
 from sentry_sdk.integrations.flask import FlaskIntegration
 
-db = SQLAlchemy()
+from .wrappers import LesoonQuery
+
+db = SQLAlchemy(query_class=LesoonQuery)
 ma = Marshmallow()
 ca = Cache()
 sentry_sdk.init(

@@ -1,8 +1,10 @@
+""" 基础web组件模块. """
 import logging
 import sys
-from collections import OrderedDict
 from datetime import timedelta
 from typing import Any
+from typing import Dict
+from typing import Optional
 
 from flask import Flask
 from flask_restful import Api
@@ -15,10 +17,11 @@ from .resource import LesoonResource
 from .resource import LesoonResourceItem
 from .response import handle_exception
 from .utils.base import camelcase
+from .wrappers import LesoonRequest
 
 
 class LesoonFlask(Flask):
-    default_extensions = OrderedDict({"db": db, "ma": ma, "ca": ca})
+    default_extensions: Dict[str, Any] = {"db": db, "ma": ma, "ca": ca}
 
     #: 重写Flask.default_config以减少未配置config的异常
     default_config = ImmutableDict(
@@ -58,26 +61,29 @@ class LesoonFlask(Flask):
         }
     )
 
+    request_class = LesoonRequest
+
     def __init__(
         self,
         import_name=__package__,
-        extensions=None,
+        extra_extensions: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         super().__init__(import_name, **kwargs)
-        extensions: OrderedDict[str, Any] = (
-            extensions or self.__class__.default_extensions
-        )
-        self._init_flask(extensions)
 
-    def _init_flask(self, extensions):
-        self._init_extensions(extensions=extensions)
+        self.registered_extensions = self.default_extensions
+        if extra_extensions:
+            self.registered_extensions.update(**extra_extensions)
+        self._init_flask()
+
+    def _init_flask(self):
+        self._init_extensions()
         self._init_errorhandler()
         self._init_commands()
         self._init_logger()
 
-    def _init_extensions(self, extensions):
-        for ext_name, ext in extensions.items():
+    def _init_extensions(self):
+        for ext_name, ext in self.registered_extensions.items():
             # 注册拓展,注册后可通过self.extensions[key]或app.key获取拓展对象
             ext.init_app(app=self)
             setattr(self, ext_name, ext)
@@ -92,13 +98,6 @@ class LesoonFlask(Flask):
         handler = logging.StreamHandler(sys.stdout)
         if not self.logger.handlers:
             self.logger.addHandler(handler)
-
-    def add_extensions(self, extensions):
-        new_extensions = dict(extensions.items() - self.extensions.items())
-        if new_extensions:
-            self._init_extensions(extensions=extensions)
-        else:
-            self.logger.warn(f"flask 拓展已存在: {new_extensions}")
 
 
 class LesoonApi(Api):

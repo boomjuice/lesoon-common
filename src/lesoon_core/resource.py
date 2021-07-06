@@ -10,9 +10,8 @@ from werkzeug.exceptions import BadRequestKeyError
 from .exceptions import ResourceAttrError
 from .extensions import db
 from .model.schema import SqlaCamelSchema
-from .parse.request import parse_request
-from .parse.sqlalchemy import parse_filter
-from .parse.sqlalchemy import parse_sort
+from .parse.sqla import parse_filter
+from .parse.sqla import parse_sort
 from .response import success_response
 
 
@@ -94,13 +93,12 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     if_item_lookup = True
 
     def get(self):
-        req = parse_request()
-        filter_exp = parse_filter(req.where, self.model)
-        sort_exp = parse_sort(req.sort, self.model)
+        filter_exp = parse_filter(request.where, self.model)
+        sort_exp = parse_sort(request.sort, self.model)
 
         query = self.model.query.filter(*filter_exp).order_by(*sort_exp)
 
-        page_query = query.paginate(page=req.page, per_page=req.page_size)
+        page_query = query.paginate(page=request.page, per_page=request.page_size)
         results = self.schema.dump(page_query.items, many=True)
 
         return success_response(result=results, total=page_query.total)

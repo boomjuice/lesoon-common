@@ -8,7 +8,7 @@ from werkzeug.exceptions import MethodNotAllowed
 
 class TestResponseUtils:
     def test_success_response_null(self):
-        expected_resp = Response(code=ResponseCode.success)
+        expected_resp = Response(code=ResponseCode.Success)
         r = success_response()
         assert expected_resp.to_dict() == r
 
@@ -29,7 +29,7 @@ class TestResponseUtils:
 
     def test_error_response_null(self):
         r = error_response(None)
-        assert r["code"] == ResponseCode.error.code
+        assert r["code"] == ResponseCode.Error.code
 
     def test_handle_http_exception(self, app):
         expected_error = MethodNotAllowed()
@@ -39,4 +39,4 @@ class TestResponseUtils:
     def test_handle_inter_exception(self, app):
         r = handle_exception(AttributeError("test"))
         assert isinstance(r, dict) is True
-        assert r["code"] == ResponseCode.error.code
+        assert r["code"] == ResponseCode.Error.code

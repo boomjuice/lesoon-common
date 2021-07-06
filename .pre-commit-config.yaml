@@ -3,18 +3,18 @@ repos:
     rev: v2.19.4
     hooks:
       - id: pyupgrade
-        args: ["--py38-plus"]
-  - repo: https://github.com/asottile/reorder_python_imports
+        args: [ "--py38-plus" ]
+  - repo: https://github.com/asottile/reorder_python_imports # 导包排序
     rev: v2.5.0
     hooks:
       - id: reorder-python-imports
         name: Reorder Python imports (src, tests)
-        args: ["--application-directories", "src"]
-  - repo: https://github.com/psf/black
+        args: [ "--application-directories", "src" ]
+  - repo: https://github.com/psf/black # 代码格式化
     rev: 21.5b1
     hooks:
       - id: black
-  - repo: https://github.com/PyCQA/flake8
+  - repo: https://github.com/PyCQA/flake8 # 代码风格检查
     rev: 3.9.2
     hooks:
       - id: flake8

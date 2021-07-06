@@ -1,3 +1,4 @@
+""" 通用Model基类模块. """
 from sqlalchemy import Column
 from sqlalchemy import text
 from sqlalchemy.dialects.mysql import BIGINT
