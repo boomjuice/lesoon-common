@@ -1,6 +1,8 @@
+flask>=2.0.1
+flask-jwt-extended>=4.2.3
 flask-restful>=0.3.9
 flask-sqlalchemy>=2.5.1
 flask-marshmallow>=0.14.0
 flask-caching>=1.10.1
 marshmallow-sqlalchemy>=0.26.1
-sentry-sdk[flask]
+sentry-sdk[flask]>=1.1.0

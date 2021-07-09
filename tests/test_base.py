@@ -22,7 +22,7 @@ class TestLesoonFlask:
         app = LesoonFlask(__name__, extra_extensions={"test": mock})
         assert app.registered_extensions["test"] is mock
         assert mock.init is True
-        assert getattr(app, "test") is mock
+        assert getattr(app, "test") is mock  # noqa:B009
 
 
 class TestLesoonApi:

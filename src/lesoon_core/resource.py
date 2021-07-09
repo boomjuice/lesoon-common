@@ -1,10 +1,14 @@
 """资源基类模块.
 提供对资源的通用的增删改查
 """
+from typing import List
+from typing import Union
+
 from flask import request
 from flask.views import MethodViewType
 from flask_restful import Resource
 from flask_sqlalchemy import Model
+from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import BadRequestKeyError
 
 from .exceptions import ResourceAttrError
@@ -18,6 +22,8 @@ from .response import success_response
 class BaseResource(Resource):
     __model__ = None
     __schema__ = None
+
+    method_decorators = [jwt_required(), ]
 
     @classmethod
     def get_schema(cls):
@@ -103,23 +109,58 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
         return success_response(result=results, total=page_query.total)
 
-    def post(self):
-        _obj = self.schema.load(request.json)
+    @classmethod
+    def _create_one(cls, data: dict):
+        """新增单条资源."""
+        _obj = cls.get_schema().load(data)
         db.session.add(_obj)
+
+    @classmethod
+    def _create_many(cls, data_list: List[dict]):
+        """批量新增资源."""
+        _objs = cls.get_schema().load(data_list, many=True)
+        db.session.bulk_save_objects(_objs)
+
+    @classmethod
+    def create(cls, data: Union[dict, List[dict]]):
+        """新增资源入口."""
+        if isinstance(data, list):
+            cls._create_many(data)
+        else:
+            cls._create_one(data)
         db.session.commit()
 
-        result = self.schema.dump(_obj)
-        return success_response(result=result), 201
+    def post(self):
+        self.__class__.create(data=request.json)
+        return success_response(), 201
 
-    def put(self):
-        _id = request.json.pop("id") or request.args.get("id") or None
-        _q = self.model.query.get(_id)
+    @classmethod
+    def _update_one(cls, data: dict):
         if not _q:
             result = None
         else:
-            _obj = self.schema.load(request.json, partial=True, instance=_q)
+            _obj = self.schema.load(data, partial=True, instance=_q)
             db.session.commit()
             result = self.schema.dump(_obj)
+
+    @classmethod
+    def _update_many(cls, data_list: List[dict]):
+        db.session.bulk_update_mappings(self.model,data_list)
+
+
+    @classmethod
+    def update(cls, data: Union[dict, List[dict]]):
+        """
+        新增资源入口.
+        """
+        if isinstance(data, list):
+            cls._update_one(data)
+        else:
+            cls._update_many(data)
+        db.session.commit()
+
+    def put(self):
+        result = self.__class__.update(data=request.json)
         return success_response(result=result)
 
     def delete(self):
@@ -129,6 +170,6 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             raise BadRequestKeyError("缺少请求参数ids")
         ids = ids.strip().split(",")
         if any(ids):
-            self.model.query.filter(self.model.id.in_(ids)).delete()
+            _objs = self.model.query.filter(self.model.id.in_(ids)).delete()
             db.session.commit()
         return success_response()

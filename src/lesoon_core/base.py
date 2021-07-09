@@ -13,6 +13,7 @@ from werkzeug.datastructures import ImmutableDict
 from .extensions import ca
 from .extensions import db
 from .extensions import ma
+from .extensions import jwt
 from .resource import LesoonResource
 from .resource import LesoonResourceItem
 from .response import handle_exception
@@ -21,7 +22,7 @@ from .wrappers import LesoonRequest
 
 
 class LesoonFlask(Flask):
-    default_extensions: Dict[str, Any] = {"db": db, "ma": ma, "ca": ca}
+    default_extensions: Dict[str, Any] = {"db": db, "ma": ma, "ca": ca, "jwt": jwt}
 
     #: 重写Flask.default_config以减少未配置config的异常
     default_config = ImmutableDict(

@@ -4,9 +4,14 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-from flask import Request
+from jose import jwe
+from jose.exceptions import JWEError
 from flask import request
+from flask import current_app
+from flask.wrappers import Request
 from flask_sqlalchemy import BaseQuery
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended import current_user
 from werkzeug.utils import cached_property
 
 from .parse.req import extract_sort_arg
@@ -43,6 +48,10 @@ class LesoonRequest(Request):
             page_size = self.__class__.PAGE_SIZE_LIMIT
         return page_size  # type:ignore
 
+    @cached_property
+    def user(self):
+        return current_user
+
 
 class LesoonQuery(BaseQuery):
     def with_request_condition(self, add_where: bool = True, add_sort: bool = True):
@@ -62,3 +71,23 @@ class LesoonQuery(BaseQuery):
             if add_sort:
                 self = self.order_by(*sort_list)
         return self
+
+
+class LesoonJwt(JWTManager):
+
+    def __init__(self, app=None):
+        super(LesoonJwt, self).__init__(app=app)
+        # flask_jwt_extended.current_user()的取值函数
+        self._user_lookup_callback = lambda _, jwt_data: jwt_data['userInfo']
+
+    def _decode_jwt_from_config(
+        self, encoded_token: str, csrf_value: str = None, allow_expired: bool = False
+    ):
+        try:
+            secret = current_app.config.get('JWT_SECRET_KEY')
+            encoded_token = jwe.decrypt(jwe_str=encoded_token, key=secret)
+        except JWEError:
+            pass
+        return super(LesoonJwt, self)._decode_jwt_from_config(encoded_token,
+                                                              csrf_value,
+                                                              allow_expired)

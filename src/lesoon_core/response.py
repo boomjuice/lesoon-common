@@ -17,7 +17,8 @@ class ResponseCode:
     Success = Code(0, "success", "")
     Error = Code(5001, "error", "系统异常")
 
-    MissParam = Code(2001, "参数缺失", "请检查传参是否完整")
+    ReqMissParam = Code(2001, "参数缺失", "请检查传参是否完整")
+    ReqMissData = Code(2002, "数据缺失", "请检查request-body数据是否完整")
 
 
 class Response:
@@ -51,9 +52,9 @@ def error_response(code: Code, **kwargs) -> dict:
 
 
 def handle_exception(error: Exception) -> Union[HTTPException, dict]:
+    app.logger.exception(error)
     if isinstance(error, HTTPException):
         return error
-    app.logger.exception(error)
     return error_response(
         code=ResponseCode.Error, msg=f"{error.__class__} : {str(error)}"
     )
