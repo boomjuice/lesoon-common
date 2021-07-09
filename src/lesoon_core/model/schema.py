@@ -1,7 +1,6 @@
 """ 通用Schema基类模块. """
 import marshmallow.fields as ma_fields
 from flask_sqlalchemy import Model
-from flask_jwt_extended import current_user
 from marshmallow import EXCLUDE
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy import SQLAlchemySchema

@@ -6,9 +6,9 @@ from typing import Union
 
 from flask import request
 from flask.views import MethodViewType
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 from flask_sqlalchemy import Model
-from flask_jwt_extended import jwt_required
 from werkzeug.exceptions import BadRequestKeyError
 
 from .exceptions import ResourceAttrError
@@ -23,7 +23,9 @@ class BaseResource(Resource):
     __model__ = None
     __schema__ = None
 
-    method_decorators = [jwt_required(), ]
+    method_decorators = [
+        jwt_required(),
+    ]
 
     @classmethod
     def get_schema(cls):
@@ -114,12 +116,14 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         """新增单条资源."""
         _obj = cls.get_schema().load(data)
         db.session.add(_obj)
+        db.session.commit()
 
     @classmethod
     def _create_many(cls, data_list: List[dict]):
         """批量新增资源."""
         _objs = cls.get_schema().load(data_list, many=True)
         db.session.bulk_save_objects(_objs)
+        db.session.commit()
 
     @classmethod
     def create(cls, data: Union[dict, List[dict]]):
@@ -128,7 +132,6 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             cls._create_many(data)
         else:
             cls._create_one(data)
-        db.session.commit()
 
     def post(self):
         self.__class__.create(data=request.json)
@@ -136,17 +139,19 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     @classmethod
     def _update_one(cls, data: dict):
+        _q = cls.__model__.query.get(data.get("id"))  # type:ignore[attr-defined]
         if not _q:
-            result = None
+            _obj = None
         else:
-            _obj = self.schema.load(data, partial=True, instance=_q)
-            db.session.commit()
-            result = self.schema.dump(_obj)
+            _obj = cls.get_schema().load(data, partial=True, instance=_q)
+        return _obj
 
     @classmethod
     def _update_many(cls, data_list: List[dict]):
-        db.session.bulk_update_mappings(self.model,data_list)
-
+        for data in data_list:
+            cls._update_one(data=data)
+        db.session.commit()
+        return None
 
     @classmethod
     def update(cls, data: Union[dict, List[dict]]):
@@ -154,10 +159,12 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         新增资源入口.
         """
         if isinstance(data, list):
-            cls._update_one(data)
+            result = cls._update_many(data)
         else:
-            cls._update_many(data)
+            result = cls._update_one(data)
         db.session.commit()
+        result = cls.get_schema().dump(result)
+        return result
 
     def put(self):
         result = self.__class__.update(data=request.json)
@@ -170,6 +177,6 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             raise BadRequestKeyError("缺少请求参数ids")
         ids = ids.strip().split(",")
         if any(ids):
-            _objs = self.model.query.filter(self.model.id.in_(ids)).delete()
+            self.model.query.filter(self.model.id.in_(ids)).delete()
             db.session.commit()
         return success_response()

@@ -12,8 +12,8 @@ from werkzeug.datastructures import ImmutableDict
 
 from .extensions import ca
 from .extensions import db
-from .extensions import ma
 from .extensions import jwt
+from .extensions import ma
 from .resource import LesoonResource
 from .resource import LesoonResourceItem
 from .response import handle_exception
