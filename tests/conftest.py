@@ -2,7 +2,8 @@
 import logging
 
 import pytest
-from src.lesoon_core import LesoonFlask
+
+from lesoon_common import LesoonFlask
 
 
 @pytest.fixture

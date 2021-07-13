@@ -1,3 +1,6 @@
+""" 单元测试基类. """
+
+
 class TestMixin:
     def assertEqual(self, left, right):
         assert left == right
@@ -19,7 +22,3 @@ class TestMixin:
 
     def assertLen(self, value, length: int):
         assert len(value) == length
-
-
-class TestBaseResourceMixin(TestMixin):
-    model = None

@@ -1,14 +1,15 @@
 import pytest
 from sqlalchemy.orm.util import aliased
-from src.lesoon_core.exceptions import ParseError
-from src.lesoon_core.parse.sqla import parse_filter
-from src.lesoon_core.parse.sqla import parse_prefix_alias
-from src.lesoon_core.parse.sqla import parse_related_models
-from src.lesoon_core.parse.sqla import parse_sort
-from src.lesoon_core.parse.sqla import parse_suffix_operation
-from src.lesoon_core.parse.sqla import sqla_op
 from tests.models import User
 from tests.models import UserExt
+
+from lesoon_common.exceptions import ParseError
+from lesoon_common.parse.sqla import parse_filter
+from lesoon_common.parse.sqla import parse_prefix_alias
+from lesoon_common.parse.sqla import parse_related_models
+from lesoon_common.parse.sqla import parse_sort
+from lesoon_common.parse.sqla import parse_suffix_operation
+from lesoon_common.parse.sqla import sqla_op
 
 
 class TestSQLParser:

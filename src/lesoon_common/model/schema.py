@@ -9,13 +9,18 @@ from ..extensions import db
 from ..utils.base import camelcase
 
 
-class SqlaCamelSchema(SQLAlchemySchema):
-    # id字段只准序列化,不准反序列读取以防更新数据库id
-    id = ma_fields.Int(dump_only=True)
-
+class FixedOperatorSchema:
     # 不准前端更新字段
     creator = ma_fields.Str(dump_only=True)
     modifier = ma_fields.Str(dump_only=True)
+    create_time = ma_fields.DateTime(dump_only=True)
+    modify_time = ma_fields.DateTime(dump_only=True)
+    update_time = ma_fields.DateTime(dump_only=True)
+
+
+class SqlaCamelSchema(SQLAlchemySchema, FixedOperatorSchema):
+    # id字段只准序列化,不准反序列读取以防更新数据库id
+    id = ma_fields.Str(dump_only=True)
 
     # 将序列化/反序列化的列名调整成驼峰命名
     def on_bind_field(self, field_name: str, field_obj: ma_fields.Field) -> None:

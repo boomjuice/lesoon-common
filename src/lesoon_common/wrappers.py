@@ -5,8 +5,11 @@ from typing import Optional
 from typing import Tuple
 
 from flask import current_app
+from flask import make_response
+from flask import render_template_string
 from flask import request
 from flask.wrappers import Request
+from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import current_user
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import BaseQuery
@@ -88,3 +91,41 @@ class LesoonJwt(JWTManager):
         except JWEError:
             pass
         return super()._decode_jwt_from_config(encoded_token, csrf_value, allow_expired)
+
+
+class LesoonDebugTool(DebugToolbarExtension):
+    def init_app(self, app):
+        wrap_json = """
+        <html>
+            <head>
+                <title>Debugging JSON Response</title>
+            </head>
+
+            <body>
+                <h1>Wrapped JSON Response</h1>
+
+                <h2>HTTP Code</h2>
+                <pre>{{ http_code }}</pre>
+
+                <h2>JSON Response</h2>
+                <pre>{{ response }}</pre>
+            </body>
+        </html>
+        """
+
+        def json_to_html(response):
+            if response.mimetype == "application/json" and request.args.get("_debug"):
+                html_wrapped_response = make_response(
+                    render_template_string(
+                        wrap_json,
+                        response=response.data.decode("utf-8"),
+                        http_code=response.status,
+                    ),
+                    response.status_code,
+                )
+                return app.process_response(html_wrapped_response)
+
+            return response
+
+        app.after_request(json_to_html)
+        super().init_app(app)

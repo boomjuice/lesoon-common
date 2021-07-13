@@ -14,6 +14,7 @@ from .extensions import ca
 from .extensions import db
 from .extensions import jwt
 from .extensions import ma
+from .extensions import toolbar
 from .resource import LesoonResource
 from .resource import LesoonResourceItem
 from .response import handle_exception
@@ -22,7 +23,13 @@ from .wrappers import LesoonRequest
 
 
 class LesoonFlask(Flask):
-    default_extensions: Dict[str, Any] = {"db": db, "ma": ma, "ca": ca, "jwt": jwt}
+    default_extensions: Dict[str, Any] = {
+        "db": db,
+        "ma": ma,
+        "ca": ca,
+        "jwt": jwt,
+        "toolbar": toolbar,
+    }
 
     #: 重写Flask.default_config以减少未配置config的异常
     default_config = ImmutableDict(
@@ -32,7 +39,7 @@ class LesoonFlask(Flask):
             "TESTING": False,
             "PROPAGATE_EXCEPTIONS": None,
             "PRESERVE_CONTEXT_ON_EXCEPTION": None,
-            "SECRET_KEY": None,
+            "SECRET_KEY": "SECRET_KEY",
             "PERMANENT_SESSION_LIFETIME": timedelta(days=31),
             "USE_X_SENDFILE": False,
             "SERVER_NAME": None,
@@ -122,6 +129,6 @@ class LesoonApi(Api):
         如果资源设置item_lookup,默认为True,则会追加注册item资源
         """
         if issubclass(resource, LesoonResource):
-            if getattr(resource, "item_lookup", True):
+            if getattr(resource, "if_item_lookup", True):
                 self.add_resource_item(resource, *urls, **kwargs)
         self.add_resource(resource, *urls, **kwargs)

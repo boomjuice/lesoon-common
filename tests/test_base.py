@@ -1,5 +1,6 @@
 from flask_restful import Resource
-from src.lesoon_core.base import LesoonFlask
+
+from lesoon_common.base import LesoonFlask
 
 
 class ExtMock:

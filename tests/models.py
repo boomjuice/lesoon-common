@@ -4,8 +4,9 @@ from sqlalchemy import DateTime
 from sqlalchemy import func
 from sqlalchemy import Integer
 from sqlalchemy import String
-from src.lesoon_core.model import BaseModel
-from src.lesoon_core.model import SqlaCamelAutoSchema
+
+from lesoon_common.model import BaseModel
+from lesoon_common.model import SqlaCamelAutoSchema
 
 
 class User(BaseModel):

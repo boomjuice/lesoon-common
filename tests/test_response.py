@@ -1,9 +1,10 @@
-from src.lesoon_core.response import error_response
-from src.lesoon_core.response import handle_exception
-from src.lesoon_core.response import Response
-from src.lesoon_core.response import ResponseCode
-from src.lesoon_core.response import success_response
 from werkzeug.exceptions import MethodNotAllowed
+
+from lesoon_common.response import error_response
+from lesoon_common.response import handle_exception
+from lesoon_common.response import Response
+from lesoon_common.response import ResponseCode
+from lesoon_common.response import success_response
 
 
 class TestResponseUtils:

@@ -1,5 +1,5 @@
-from src.lesoon_core.parse.req import extract_sort_arg
-from src.lesoon_core.parse.req import extract_where_arg
+from lesoon_common.parse.req import extract_sort_arg
+from lesoon_common.parse.req import extract_where_arg
 
 
 class TestReqParser:

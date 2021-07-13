@@ -1,6 +1,7 @@
 import pytest
-from src.lesoon_core.utils.base import camelcase
-from src.lesoon_core.utils.base import udlcase
+
+from lesoon_common.utils.base import camelcase
+from lesoon_common.utils.base import udlcase
 
 
 class TestBaseUtils:
