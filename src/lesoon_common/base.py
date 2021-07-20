@@ -5,11 +5,15 @@ from datetime import timedelta
 from typing import Any
 from typing import Dict
 from typing import Optional
+from typing import Union
 
+from flask import current_app
 from flask import Flask
 from flask_restful import Api
 from werkzeug.datastructures import ImmutableDict
+from werkzeug.exceptions import HTTPException
 
+from .exceptions import ServiceError
 from .extensions import ca
 from .extensions import db
 from .extensions import jwt
@@ -17,9 +21,22 @@ from .extensions import ma
 from .extensions import toolbar
 from .resource import LesoonResource
 from .resource import LesoonResourceItem
-from .response import handle_exception
-from .utils.base import camelcase
+from .response import error_response
+from .response import ResponseCode
+from .utils.str import camelcase
 from .wrappers import LesoonRequest
+
+
+def handle_exception(error: Exception) -> Union[HTTPException, dict]:
+    if isinstance(error, HTTPException):
+        return error
+    elif isinstance(error, ServiceError):
+        return error_response(code=error.code, msg=error.msg)
+    else:
+        current_app.logger.exception(error)
+        return error_response(
+            code=ResponseCode.Error, msg=f"{error.__class__} : {str(error)}"
+        )
 
 
 class LesoonFlask(Flask):

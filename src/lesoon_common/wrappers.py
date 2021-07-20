@@ -21,6 +21,7 @@ from .parse.req import extract_sort_arg
 from .parse.req import extract_where_arg
 from .parse.sqla import parse_multi_condition
 from .parse.sqla import parse_related_models
+from .utils.jwt import load_user_from_token
 
 
 class LesoonRequest(Request):
@@ -57,6 +58,12 @@ class LesoonRequest(Request):
 
 
 class LesoonQuery(BaseQuery):
+    def paginate(self, page=None, per_page=None, error_out=True, max_per_page=None):
+        """禁用分页异常以及限制最大分页数"""
+        page = page or request.page
+        per_page = per_page or request.page_size
+        return super().paginate(page, per_page, False, 1000)
+
     def with_request_condition(self, add_where: bool = True, add_sort: bool = True):
         """注入请求查询过滤条件.
         : 将请求参数转化成sqlalchemy语法,注入Query对象
@@ -80,14 +87,29 @@ class LesoonJwt(JWTManager):
     def __init__(self, app=None):
         super().__init__(app=app)
         # flask_jwt_extended.current_user()的取值函数
-        self._user_lookup_callback = lambda _, jwt_data: jwt_data["userInfo"]
+        self._user_lookup_callback = load_user_from_token
+
+    def _encode_jwt_from_config(
+        self,
+        identity,
+        token_type,
+        claims=None,
+        fresh=False,
+        expires_delta=None,
+        headers=None,
+    ):
+        jwt_token = super()._encode_jwt_from_config(
+            identity, token_type, claims, fresh, expires_delta, headers
+        )
+        secret = current_app.config.get("JWT_SECRET_KEY")
+        return jwe.encrypt(jwt_token, key=secret, cty="JWT")
 
     def _decode_jwt_from_config(
         self, encoded_token, csrf_value=None, allow_expired=False
     ):
         try:
             secret = current_app.config.get("JWT_SECRET_KEY")
-            encoded_token = jwe.decrypt(jwe_str=encoded_token, key=secret)
+            encoded_token = jwe.decrypt(jwe_str=encoded_token, key=secret).decode()
         except JWEError:
             pass
         return super()._decode_jwt_from_config(encoded_token, csrf_value, allow_expired)

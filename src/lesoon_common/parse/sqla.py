@@ -16,7 +16,7 @@ from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import expression as SqlaExp
 
 from ..exceptions import ParseError
-from ..utils.base import udlcase
+from ..utils.str import udlcase
 
 SqlaExp = SqlaExp.BinaryExpression
 SqlaExpList = List[SqlaExp]

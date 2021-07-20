@@ -1,26 +1,20 @@
 import pytest
 
-from lesoon_common.utils.base import camelcase
-from lesoon_common.utils.base import udlcase
+from lesoon_common.utils.base import generate_id
 
 
-class TestBaseUtils:
-    def test_camelcase_empty(self):
-        assert camelcase("") == ""
+class TestStrUtil:
+    def test_generate_id_invalid(self):
+        with pytest.raises(ValueError):
+            generate_id(10)
 
-    def test_camelcase_udl(self):
-        assert camelcase("test_example") == "testExample"
+    def test_generate_id_standard(self):
+        r_id = generate_id(20)
+        assert type(r_id) == int
+        assert len(str(r_id)) == 20
 
-    def test_camelcase_invalid(self):
-        with pytest.raises(TypeError):
-            camelcase(111)
-
-    def test_udlcase_empty(self):
-        assert udlcase("") == ""
-
-    def test_udlcase_camel(self):
-        assert udlcase("testExample") == "test_example"
-
-    def test_udlcase_invalid(self):
-        with pytest.raises(TypeError):
-            udlcase(111)
+    def test_generate_id_bulk(self):
+        r_id_set = set()
+        for _ in range(10000):
+            r_id_set.add(generate_id(20))
+        assert len(r_id_set) == 10000
