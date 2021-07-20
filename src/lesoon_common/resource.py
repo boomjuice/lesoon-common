@@ -12,6 +12,7 @@ from werkzeug.exceptions import BadRequestKeyError
 
 from .exceptions import ResourceAttrError
 from .extensions import db
+from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
 from .parse.sqla import parse_filter
 from .parse.sqla import parse_sort
@@ -35,6 +36,90 @@ class BaseResource(Resource):
     @property
     def schema(self):
         return self.__class__.get_schema()
+
+    @classmethod
+    def before_create_one(cls, data: dict):
+        pass
+
+    @classmethod
+    def after_create_one(cls, data: dict, _obj: BaseModel):
+        pass
+
+    @classmethod
+    def create_one(cls, data: dict):
+        """新增单条资源."""
+        _obj = cls.get_schema().load(data)
+        db.session.add(_obj)
+        return _obj
+
+    @classmethod
+    def before_create_many(cls, data_list: List[dict]):
+        pass
+
+    @classmethod
+    def after_create_many(cls, data_list: List[dict], _objs: List[BaseModel]):
+        pass
+
+    @classmethod
+    def create_many(cls, data_list: List[dict]):
+        """批量新增资源."""
+        _objs = cls.get_schema().load(data_list, many=True)
+        db.session.bulk_save_objects(_objs)
+        return _objs
+
+    @classmethod
+    def create(cls, data: Union[dict, List[dict]]):
+        """新增资源入口."""
+        if isinstance(data, list):
+            cls.before_create_many(data)
+            _objs = cls.create_many(data)
+            cls.after_create_many(data, _objs)
+            result = None
+        else:
+            cls.before_create_one(data)
+            _obj = cls.create_one(data)
+            cls.after_create_one(data, _obj)
+            result = _obj
+
+        db.session.commit()
+        result = cls.get_schema().dump(result)
+        return result
+
+    @classmethod
+    def update_one(cls, data: dict):
+        """更新单条资源."""
+        _obj = cls.get_schema().load(data, partial=True)
+        _q = cls.__model__.query.get(data.get("id"))  # type:ignore[attr-defined]
+        if not _q:
+            _obj = None
+        else:
+            _obj = cls.get_schema().load(data, partial=True, instance=_q)
+        return _obj
+
+    @classmethod
+    def update_many(cls, data_list: List[dict]):
+        """批量更新资源."""
+        for data in data_list:
+            cls.update_one(data=data)
+        return None
+
+    @classmethod
+    def update(cls, data: Union[dict, List[dict]]):
+        """新增资源入口."""
+        if isinstance(data, list):
+            result = cls.update_many(data)
+        else:
+            result = cls.update_one(data)
+        db.session.commit()
+        result = cls.get_schema().dump(result)
+        return result
+
+    @classmethod
+    def delete_in(cls, ids: List[str]):
+        if not ids:
+            return
+
+        cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
 
 
 class LesoonResourceType(MethodViewType):
@@ -106,68 +191,13 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
         return success_response(result=results, total=page_query.total)
 
-    @classmethod
-    def _create_one(cls, data: dict):
-        """新增单条资源."""
-        _obj = cls.get_schema().load(data)
-        db.session.add(_obj)
-
-    @classmethod
-    def _create_many(cls, data_list: List[dict]):
-        """批量新增资源."""
-        schema = cls.__schema__(load_instance=False)  # type:ignore[misc]
-        valid_data_list = schema.load(data_list, many=True)
-        db.session.bulk_insert_mappings(cls.__model__, valid_data_list)
-
-    @classmethod
-    def create(cls, data: Union[dict, List[dict]]):
-        """新增资源入口."""
-        if isinstance(data, list):
-            cls._create_many(data)
-        else:
-            cls._create_one(data)
-        db.session.commit()
-
-    def post(self):
-        self.__class__.create(data=request.json)
-        return success_response(), 201
-
-    @classmethod
-    def _update_one(cls, data: dict):
-        """更新单条资源."""
-        _obj = cls.get_schema().load(data, partial=True)
-        _q = cls.__model__.query.get(data.get("id"))  # type:ignore[attr-defined]
-        if not _q:
-            _obj = None
-        else:
-            _obj = cls.get_schema().load(data, partial=True, instance=_q)
-        return _obj
-
-    @classmethod
-    def _update_many(cls, data_list: List[dict]):
-        """批量更新资源."""
-        for data in data_list:
-            cls._update_one(data=data)
-        return None
-
-    @classmethod
-    def update(cls, data: Union[dict, List[dict]]):
-        """新增资源入口."""
-        if isinstance(data, list):
-            result = cls._update_many(data)
-        else:
-            result = cls._update_one(data)
-        db.session.commit()
-        result = cls.get_schema().dump(result)
-        return result
-
     def put(self):
         result = self.__class__.update(data=request.json)
         return success_response(result=result)
 
-    @classmethod
-    def _delete(cls, ids: list):
-        cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
+    def post(self):
+        result = self.__class__.create(data=request.json)
+        return success_response(result=result), 201
 
     def delete(self):
         try:
@@ -176,6 +206,6 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             raise BadRequestKeyError("缺少请求参数ids")
         ids = ids.strip().split(",")
         if any(ids):
-            self.__class__._delete(ids)
+            self.__class__.delete_in(ids)
             db.session.commit()
         return success_response()

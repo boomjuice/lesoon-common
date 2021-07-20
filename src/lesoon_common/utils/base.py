@@ -1,16 +1,34 @@
-""" 基础工具模块."""
-import re
+import random
+import string
+import time
+from typing import List
 
 
-def camelcase(udl_str: str):
-    if not isinstance(udl_str, str):
-        raise TypeError("camelcase() 只能接受str类型")
-    parts = iter(udl_str.split("_"))
-    return next(parts) + "".join(i.title() for i in parts)
+def generate_id(size: int = 18) -> int:
+    """根据时间戳加随机整数生成id."""
+    if size < 14:
+        raise ValueError("根据时间戳生成的id长度必须在14以上")
+    else:
+        curr_ts = int(time.time() * 1000)
+        num_of_numeric = size + 1 - 14
+        random_id = curr_ts * 10 ** num_of_numeric + random_numeric(num_of_numeric)
+        return random_id
 
 
-def udlcase(hump_str: str):
-    if not isinstance(hump_str, str):
-        raise TypeError("udlcase() 只能接受str类型")
-    udl_str = re.sub(r"([A-Z])", r"_\1", hump_str).lower()
-    return udl_str
+def _random_char_list(size: int, char_set: str) -> List[str]:
+    char_list = random.choices(population=char_set, k=size)
+    return char_list
+
+
+def random_numeric(size: int) -> int:
+    return int("".join(_random_char_list(size=size, char_set=string.digits)))
+
+
+def random_alpha(size: int) -> str:
+    return "".join(_random_char_list(size=size, char_set=string.ascii_letters))
+
+
+def random_alpha_numeric(size: int) -> str:
+    return "".join(
+        _random_char_list(size=size, char_set=string.digits + string.ascii_letters)
+    )

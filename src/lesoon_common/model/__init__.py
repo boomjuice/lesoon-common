@@ -1,3 +1,4 @@
+from . import fields
 from .base import BaseCompanyModel
 from .base import BaseModel
 from .base import IdModel

@@ -1,10 +1,6 @@
 """ 响应体模块. """
 from typing import Any
 from typing import NamedTuple
-from typing import Union
-
-from flask import current_app as app
-from werkzeug.exceptions import HTTPException
 
 
 class Code(NamedTuple):
@@ -17,17 +13,23 @@ class ResponseCode:
     Success = Code(0, "success", "")
     Error = Code(5001, "error", "系统异常")
 
-    ReqMissParam = Code(2001, "参数缺失", "请检查传参是否完整")
-    ReqMissData = Code(2002, "数据缺失", "请检查request-body数据是否完整")
+    ReqParamMiss = Code(4001, "参数缺失", "请检查传参是否完整")
+    ReqDataMiss = Code(4002, "数据缺失", "请检查请求体数据是否完整")
+    ReqParamError = Code(4003, "参数异常", "请检查传参是否正确")
+    ReqDataError = Code(4004, "数据异常", "请检查请求体数据是否正确")
+    ValidOpError = Code(4005, "违法操作", "当前操作不合法")
+
+    LoginError = Code(4011, "登录异常", "请检查用户名或密码是否正常")
 
 
 class Response:
     def __init__(self, code: Code, **kwargs):
         self.code = code.code
-        self.msg = kwargs.pop("msg", None) or code.msg
+        self.msg = code.msg
         for k, v in kwargs.items():
-            if not hasattr(self, k):
-                setattr(self, k, v)
+            if isinstance(v, bytes):
+                v = v.decode()
+            setattr(self, k, v)
 
     def to_dict(self) -> dict:
         return self.__dict__
@@ -49,12 +51,3 @@ def error_response(code: Code, **kwargs) -> dict:
     if not code:
         code = ResponseCode.Error
     return Response(code=code, solution=code.solution, **kwargs).to_dict()
-
-
-def handle_exception(error: Exception) -> Union[HTTPException, dict]:
-    app.logger.exception(error)
-    if isinstance(error, HTTPException):
-        return error
-    return error_response(
-        code=ResponseCode.Error, msg=f"{error.__class__} : {str(error)}"
-    )
