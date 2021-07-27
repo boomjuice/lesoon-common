@@ -13,7 +13,7 @@ class TestReqParser:
 
     def test_extract_sort_arg_null(self):
         sort = ""
-        assert extract_sort_arg(sort) is None
+        assert extract_sort_arg(sort) == []
 
     def test_extract_where_arg_dictionary(self):
         where = "{'id':1}"
@@ -21,4 +21,4 @@ class TestReqParser:
 
     def test_extract_where_arg_null(self):
         where = ""
-        assert extract_where_arg(where) is None
+        assert extract_where_arg(where) == {}

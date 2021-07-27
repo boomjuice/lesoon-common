@@ -14,12 +14,15 @@ from ..extensions import db
 Model = db.Model
 
 
-def current_user_attr(key: str):
+def current_user_attr(key: str, default=None):
     def warpper():
         try:
             return get_current_user()[key]
         except RuntimeError:
-            return "dev-test"
+            if default is not None:
+                return default
+            else:
+                raise ValueError(f"{key}的默认值不允许为None值")
 
     return warpper
 
@@ -54,7 +57,10 @@ class CommonMixin(StatusMixin, RemarkMixin):
 
 class FixedOpeartorMixin:
     creator = Column(
-        String(20), nullable=False, comment="创建人", default=current_user_attr("userName")
+        String(20),
+        nullable=False,
+        comment="创建人",
+        default=current_user_attr("userName", ""),
     )
     create_time = Column(
         DateTime,
@@ -64,7 +70,10 @@ class FixedOpeartorMixin:
         index=True,
     )
     modifier = Column(
-        String(20), nullable=True, comment="修改人", default=current_user_attr("userName")
+        String(20),
+        nullable=True,
+        comment="修改人",
+        default=current_user_attr("userName", ""),
     )
     modify_time = Column(DateTime, nullable=True, comment="修改时间", onupdate=datetime.now)
     update_time = Column(

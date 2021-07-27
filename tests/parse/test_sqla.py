@@ -65,9 +65,14 @@ class TestSQLParser:
         r = parse_suffix_operation("status_ne", 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_operation_like(self):
+    def test_operation_like_normal(self):
         expected_expression = User.status.like("%1%")
-        r = parse_suffix_operation("status_like", "%1%", User)
+        r = parse_suffix_operation("status_like", "1", User)
+        assert expected_expression.compare(r) is True
+
+    def test_operation_like(self):
+        expected_expression = User.status.like("%1")
+        r = parse_suffix_operation("status_like", "%1", User)
         assert expected_expression.compare(r) is True
 
     def test_operation_in(self):

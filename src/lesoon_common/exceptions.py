@@ -1,17 +1,11 @@
 """ 异常模块."""
-import typing
+from typing import Optional
 
 from .response import Code
 
 
 class ParseError(Exception):
     """请求参数解析异常类"""
-
-    pass
-
-
-class RequestParamError(Exception):
-    """请求参数异常"""
 
     pass
 
@@ -25,7 +19,7 @@ class ResourceAttrError(Exception):
 class ServiceError(Exception):
     """服务异常"""
 
-    def __init__(self, code: Code, msg: typing.Optional[str] = None):
+    def __init__(self, code: Code, msg: Optional[str] = None):
         super().__init__()
         self.code = code
         self.msg = msg or code.msg

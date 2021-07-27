@@ -1,10 +1,11 @@
 """资源基类模块.
 提供对资源的通用的增删改查
 """
+from typing import Any
 from typing import List
+from typing import Tuple
 from typing import Union
 
-from flask import request
 from flask.views import MethodViewType
 from flask_restful import Resource
 from flask_sqlalchemy import Model
@@ -12,11 +13,11 @@ from werkzeug.exceptions import BadRequestKeyError
 
 from .exceptions import ResourceAttrError
 from .extensions import db
+from .globals import request
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
-from .parse.sqla import parse_filter
-from .parse.sqla import parse_sort
 from .response import success_response
+from .wrappers import LesoonQuery
 
 
 class BaseResource(Resource):
@@ -38,11 +39,32 @@ class BaseResource(Resource):
         return self.__class__.get_schema()
 
     @classmethod
+    def select_filter(cls) -> LesoonQuery:
+        query: LesoonQuery = cls.__model__.query  # type:ignore[attr-defined]
+        return query.with_request_condition()
+
+    @classmethod
+    def page_get(cls) -> Tuple[Any, int]:
+        query: LesoonQuery = cls.select_filter()
+        if request.if_page:
+            page_query = query.paginate()
+            result = page_query.items
+            total = page_query.total
+        else:
+            result = query.all()
+            total = query.order_by(None).count()
+
+        results = cls.get_schema().dump(result, many=True)
+        return results, total
+
+    @classmethod
     def before_create_one(cls, data: dict):
+        """新增前操作."""
         pass
 
     @classmethod
     def after_create_one(cls, data: dict, _obj: BaseModel):
+        """新增后操作."""
         pass
 
     @classmethod
@@ -54,10 +76,12 @@ class BaseResource(Resource):
 
     @classmethod
     def before_create_many(cls, data_list: List[dict]):
+        """批量新增前操作."""
         pass
 
     @classmethod
     def after_create_many(cls, data_list: List[dict], _objs: List[BaseModel]):
+        """批量新增后操作."""
         pass
 
     @classmethod
@@ -118,7 +142,6 @@ class BaseResource(Resource):
     def delete_in(cls, ids: List[str]):
         if not ids:
             return
-
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
 
 
@@ -126,19 +149,24 @@ class LesoonResourceType(MethodViewType):
     def __init__(cls, name, bases, d):  # noqa
         super().__init__(name, bases, d)
         if name != "LesoonResource":
+            model = None
+            schema = None
             if not d.get("__model__", None):
-                raise ResourceAttrError(f"{name}未定义 __model__属性")
+                for base in bases:
+                    model = model or getattr(base, "__model__")  # noqa:B009
+                    schema = schema or getattr(base, "__schema__")  # noqa:B009
+                if not model:
+                    raise ResourceAttrError(f"{name}未定义 __model__属性")
+                if not issubclass(model, Model):
+                    raise ResourceAttrError(f"{name}:{d['__model__']} 不是期望的类型:{Model}")
 
-            if not issubclass(d["__model__"], Model):
-                raise ResourceAttrError(f"{name}:{d['__model__']} 不是期望的类型:{Model}")
+                if not schema:
+                    raise ResourceAttrError(f"{name}未定义 __schema__属性")
 
-            if not d.get("__schema__", None):
-                raise ResourceAttrError(f"{name}未定义 __schema__属性")
-
-            if not issubclass(d["__schema__"], SqlaCamelSchema):
-                raise ResourceAttrError(
-                    f"{name}:{d['__schema__']} 不是期望的类型:{SqlaCamelSchema}"
-                )
+                if not issubclass(schema, SqlaCamelSchema):
+                    raise ResourceAttrError(
+                        f"{name}:{d['__schema__']} 不是期望的类型:{SqlaCamelSchema}"
+                    )
 
 
 class LesoonResourceItem(BaseResource):
@@ -156,23 +184,15 @@ class LesoonResourceItem(BaseResource):
         return self.model.query.filter(field == field_val).first()
 
     def get(self, **lookup):
-        _q = self.get_one_raw(lookup)
-
-        return success_response(result=self.schema.dump(_q))
+        _obj = self.get_one_raw(lookup)
+        return success_response(result=self.schema.dump(_obj))
 
     def put(self, **lookup):
-        _q = self.get_one_raw(lookup)
-        if not _q:
-            result = None
-        else:
-            _obj = self.schema.load(request.json, partial=True, instance=_q)
-            db.session.commit()
-            result = self.schema.dump(_obj)
-        return success_response(result=result)
+        return self.update(lookup)
 
     def delete(self, **lookup):
-        if _q := self.get_one_raw(lookup):
-            db.session.delete(_q)
+        if _obj := self.get_one_raw(lookup):
+            db.session.delete(_obj)
             db.session.commit()
         return success_response()
 
@@ -181,15 +201,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     if_item_lookup = True
 
     def get(self):
-        filter_exp = parse_filter(request.where, self.model)
-        sort_exp = parse_sort(request.sort, self.model)
-
-        query = self.model.query.filter(*filter_exp).order_by(*sort_exp)
-
-        page_query = query.paginate(page=request.page, per_page=request.page_size)
-        results = self.schema.dump(page_query.items, many=True)
-
-        return success_response(result=results, total=page_query.total)
+        results, total = self.page_get()
+        return success_response(result=results, total=total)
 
     def put(self):
         result = self.__class__.update(data=request.json)

@@ -11,7 +11,6 @@ from flask_jwt_extended.internal_utils import custom_verification_for_token
 from flask_jwt_extended.internal_utils import verify_token_not_blocklisted
 from flask_jwt_extended.internal_utils import verify_token_type
 from flask_jwt_extended.utils import decode_token
-from flask_jwt_extended.utils import get_current_user
 from flask_jwt_extended.utils import get_unverified_jwt_headers
 from flask_jwt_extended.view_decorators import _decode_jwt_from_cookies
 from flask_jwt_extended.view_decorators import _decode_jwt_from_headers
@@ -20,17 +19,22 @@ from flask_jwt_extended.view_decorators import _decode_jwt_from_query_string
 from flask_jwt_extended.view_decorators import _load_user
 from flask_jwt_extended.view_decorators import _verify_token_is_fresh
 from jose import jwe
-from werkzeug.local import LocalProxy
 
 from ..dataclass import TokenUser
-
-current_user: TokenUser = LocalProxy(
-    lambda: get_current_user()
-)  # type:ignore[assignment]
+from ..exceptions import RequestError
+from ..response import ResponseCode
 
 
-def load_user_from_token(jwt_headers, jwt_data) -> TokenUser:
+def user_lookup_callback(jwt_headers, jwt_data) -> TokenUser:
     return TokenUser.load(jwt_data["userInfo"])
+
+
+def invalid_token_callback(jwt_headers, jwt_data):
+    raise RequestError(code=ResponseCode.TokenInValid)
+
+
+def expired_token_callback(jwt_headers, jwt_data):
+    raise RequestError(code=ResponseCode.TokenExpired)
 
 
 def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):

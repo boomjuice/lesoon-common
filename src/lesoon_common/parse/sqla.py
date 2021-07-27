@@ -3,11 +3,13 @@
 """
 import operator as sqla_op
 import re
+from typing import Any
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Type
+from typing import Union
 
 from flask_sqlalchemy import Model
 from sqlalchemy.orm import InstrumentedAttribute
@@ -71,7 +73,9 @@ def parse_dictionary(where: dict, model: Type[Model]) -> SqlaExpList:
     return conditions
 
 
-def parse_suffix_operation(column: str, value: str, model: Type[Model]) -> SqlaExp:
+def parse_suffix_operation(
+    column: str, value: Union[int, str, List[Any]], model: Type[Model]
+) -> SqlaExp:
     op_mapper = {
         "eq": sqla_op.eq,
         "ne": sqla_op.ne,
@@ -81,21 +85,33 @@ def parse_suffix_operation(column: str, value: str, model: Type[Model]) -> SqlaE
         "gte": sqla_op.ge,
     }
     if m := re.match(r"(?P<col>[\w\\.]+)_(?P<op>[\w]+)", column):
-        col, op = udlcase(m.group("col")), m.group("op")
+        col, op = m.group("col"), m.group("op")
         attr = _parse_attribute_name(col, model)
         if op in op_mapper:
             return op_mapper[op](attr, value)
         elif op == "like":
-            value = value if value.count("%") else f"%{value}%"
+            value = value if str(value).count("%") else f"%{value}%"
             return attr.like(value)
-        elif op == "in":
-            value_list: List[str] = value.strip().split(",")
-            return attr.in_(value_list)
+        elif op in ("in", "notin"):
+            if isinstance(value, list):
+                # 数组
+                return getattr(attr, f"{op}_")(value)
+            elif isinstance(value, str):
+                # 逗号分隔字符串
+                value_list: List[str] = value.strip().split(",")
+                return getattr(attr, f"{op}_")(value_list)
+            else:
+                # 不支持in的类型
+                raise ParseError(f"in不支持的类型{value}:{type(value)}")
         else:
+            # 未定义的查询操作
             raise ParseError(f"无法解析的查询参数 {column}:{value}")
     else:
         attr = _parse_attribute_name(column, model)
-        return sqla_op.eq(attr, value)
+        if isinstance(value, list):
+            return attr.in_(value)
+        else:
+            return sqla_op.eq(attr, value)
 
 
 def parse_prefix_alias(name: str, model: Type[Model]) -> Optional[str]:

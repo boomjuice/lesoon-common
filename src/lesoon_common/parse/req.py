@@ -3,23 +3,22 @@ import ast
 import re
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
-from ..exceptions import RequestParamError
+from ..exceptions import ParseError
 
 
-def extract_where_arg(where) -> Optional[Dict[str, str]]:
+def extract_where_arg(where) -> Dict[str, str]:
     if where:
         try:
             return ast.literal_eval(where)
         except ValueError:
-            raise RequestParamError(f"请求参数无法序列化 where:{where}")
+            raise ParseError(f"请求参数无法序列化 where:{where}")
     else:
-        return None
+        return dict()
 
 
-def extract_sort_arg(sort) -> Optional[List[Tuple[str, int]]]:
+def extract_sort_arg(sort) -> List[Tuple[str, int]]:
     if sort:
         if re.match(r"^[-,\w.]+$", sort):
             arg = []
@@ -34,4 +33,4 @@ def extract_sort_arg(sort) -> Optional[List[Tuple[str, int]]]:
         else:
             return ast.literal_eval(sort)
     else:
-        return None
+        return list()

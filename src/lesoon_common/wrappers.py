@@ -1,7 +1,7 @@
 """ 额外类库封装模块. """
+from typing import Any
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 from flask import current_app
@@ -14,14 +14,15 @@ from flask_jwt_extended import current_user
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import BaseQuery
 from jose import jwe
-from jose.exceptions import JWEError
 from werkzeug.utils import cached_property
 
 from .parse.req import extract_sort_arg
 from .parse.req import extract_where_arg
 from .parse.sqla import parse_multi_condition
 from .parse.sqla import parse_related_models
-from .utils.jwt import load_user_from_token
+from .utils.jwt import expired_token_callback
+from .utils.jwt import invalid_token_callback
+from .utils.jwt import user_lookup_callback
 
 
 class LesoonRequest(Request):
@@ -29,14 +30,19 @@ class LesoonRequest(Request):
     PAGE_SIZE_LIMIT = 1000
 
     @cached_property
-    def where(self) -> Optional[Dict[str, str]]:
+    def where(self) -> Dict[str, Any]:
         where = extract_where_arg(self.args.get("where"))
         return where
 
     @cached_property
-    def sort(self) -> Optional[List[Tuple[str, int]]]:
+    def sort(self) -> List[Tuple[str, int]]:
         sort = extract_sort_arg(self.args.get("sort"))
         return sort
+
+    @cached_property
+    def if_page(self) -> bool:
+        if_page = self.args.get("ifPage", default=1, type=int)
+        return bool(if_page)
 
     @cached_property
     def page(self) -> int:
@@ -87,7 +93,9 @@ class LesoonJwt(JWTManager):
     def __init__(self, app=None):
         super().__init__(app=app)
         # flask_jwt_extended.current_user()的取值函数
-        self._user_lookup_callback = load_user_from_token
+        self._user_lookup_callback = user_lookup_callback
+        self._invalid_token_callback = invalid_token_callback
+        self._expired_token_callback = expired_token_callback
 
     def _encode_jwt_from_config(
         self,
@@ -103,16 +111,6 @@ class LesoonJwt(JWTManager):
         )
         secret = current_app.config.get("JWT_SECRET_KEY")
         return jwe.encrypt(jwt_token, key=secret, cty="JWT")
-
-    def _decode_jwt_from_config(
-        self, encoded_token, csrf_value=None, allow_expired=False
-    ):
-        try:
-            secret = current_app.config.get("JWT_SECRET_KEY")
-            encoded_token = jwe.decrypt(jwe_str=encoded_token, key=secret).decode()
-        except JWEError:
-            pass
-        return super()._decode_jwt_from_config(encoded_token, csrf_value, allow_expired)
 
 
 class LesoonDebugTool(DebugToolbarExtension):

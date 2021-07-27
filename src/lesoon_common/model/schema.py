@@ -62,6 +62,8 @@ class SqlaCamelSchema(SQLAlchemySchema, FixedOperatorSchema):
         include_relationships: bool = False
         # model字段映射类
         model_converter: ModelConverter = CustomModelConverter
+        # 保持有序
+        ordered = True
 
 
 class SqlaCamelAutoSchema(SqlaCamelSchema, SQLAlchemyAutoSchema):
