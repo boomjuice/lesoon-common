@@ -21,7 +21,7 @@ from flask_jwt_extended.view_decorators import _verify_token_is_fresh
 from jose import jwe
 
 from ..dataclass import TokenUser
-from ..exceptions import RequestError
+from ..response import error_response
 from ..response import ResponseCode
 
 
@@ -30,11 +30,11 @@ def user_lookup_callback(jwt_headers, jwt_data) -> TokenUser:
 
 
 def invalid_token_callback(jwt_headers, jwt_data):
-    raise RequestError(code=ResponseCode.TokenInValid)
+    return error_response(code=ResponseCode.TokenInValid)
 
 
 def expired_token_callback(jwt_headers, jwt_data):
-    raise RequestError(code=ResponseCode.TokenExpired)
+    return error_response(code=ResponseCode.TokenExpired)
 
 
 def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):
@@ -63,14 +63,9 @@ def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=
         return
 
     try:
-        if refresh:
-            jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
-                locations, fresh, refresh=True
-            )
-        else:
-            jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
-                locations, fresh
-            )
+        encoded_token, jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
+            locations, fresh, refresh=refresh
+        )
     except NoAuthorizationError:
         if not optional:
             raise
@@ -195,4 +190,4 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     verify_token_not_blocklisted(jwt_header, decoded_token)
     custom_verification_for_token(jwt_header, decoded_token)
 
-    return decoded_token, jwt_header, jwt_location
+    return encoded_token, decoded_token, jwt_header, jwt_location

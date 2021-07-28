@@ -1,9 +1,8 @@
 """ 响应体模块. """
-from typing import Any
-from typing import NamedTuple
+import typing as t
 
 
-class Code(NamedTuple):
+class Code(t.NamedTuple):
     code: int
     msg: str
     solution: str
@@ -29,6 +28,7 @@ class ResponseCode:
     TokenInValid = Code(4012, "token违法", "请检查token是否正确")
 
     LoginError = Code(4021, "登录异常", "请检查用户名或密码是否正常")
+    NotFoundError = Code(4041, "查询异常", "当前查询参数没有对应结果")
 
 
 class Response:
@@ -36,15 +36,13 @@ class Response:
         self.code = code.code
         self.msg = code.msg
         for k, v in kwargs.items():
-            if isinstance(v, bytes):
-                v = v.decode()
             setattr(self, k, v)
 
     def to_dict(self) -> dict:
         return self.__dict__
 
 
-def success_response(result: Any = None, **kwargs) -> dict:
+def success_response(result: t.Any = None, **kwargs) -> dict:
     resp = Response(code=ResponseCode.Success, **kwargs)
     if result:
         if isinstance(result, list):

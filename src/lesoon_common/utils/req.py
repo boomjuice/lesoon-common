@@ -1,8 +1,6 @@
 import inspect
+import typing as t
 from functools import wraps
-from typing import Any
-from typing import Dict
-from typing import Optional
 
 from ..exceptions import RequestError
 from ..globals import request
@@ -28,9 +26,9 @@ class Param:
     def __init__(
         self,
         key: str,
-        default: Any = None,
+        default: t.Any = None,
         loc: str = "args",
-        type: Any = str,
+        type: t.Any = str,
         allow_none: bool = False,
         msg: str = "",
     ):
@@ -42,26 +40,58 @@ class Param:
             raise ValueError(f"{loc}是{self.REQUEST_LOCATION}中的值")
         self.loc = loc
 
-        if not msg:
-            self.msg = f"传参异常:{key}"
+        self.msg = msg or f"传参异常:{key}"
 
         self.allow_none = allow_none
         self.miss_code = self.PARAM_MISS_CODE[loc]
         self.error_code = self.PARAM_ERROR_CODE[loc]
 
 
-def _get_request_params(param_dict: Dict[str, Param]) -> dict:
+def _get_request_params(param_dict: t.Dict[str, Param]) -> dict:
     request_params = dict()
     for arg_name, param in param_dict.items():
         prop = getattr(request, param.loc)
-        value = prop.get(param.key, type=param.type, default=param.default)
+        value = prop.get(param.key) or param.default
+        try:
+            value = param.type(value)
+        except ValueError:
+            raise RequestError(
+                code=param.error_code, msg=f"{param.key}类型转换异常 {param, type}:{value}"
+            )
+
         if value is None and not param.allow_none:
             raise RequestError(code=param.miss_code, msg=param.msg)
         request_params[arg_name] = value
     return request_params
 
 
-def request_param(param_dict: Optional[Dict[str, Param]] = None):
+def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
+    """解析函数/方法签名.
+    示例:
+        if  func = def example(self,user_id:int=None)
+        return  {'user_id':Param(key='userId', type=int, loc='args',allow_none=True)}
+    """
+    # 获取请求函数签名,解析参数
+    param_dict = dict()
+    func_params = inspect.signature(func).parameters
+
+    for arg_name, arg_param in func_params.items():
+        # 类方法特殊处理
+        if arg_name == "self":
+            continue
+
+        param = Param(key=camelcase(arg_name))
+        if arg_param.default is not inspect.Parameter.empty:
+            param.default = arg_param.default
+            param.allow_none = True
+        if arg_param.annotation is not inspect.Parameter.empty:
+            param.type = arg_param.annotation
+        param_dict[arg_name] = param
+
+    return param_dict
+
+
+def request_param(param_dict: t.Optional[t.Dict[str, Param]] = None):
     """请求参数解析装饰器.
     示例:
     根据函数签名获取请求参数，如下所示，默认从request.args中获取
@@ -82,22 +112,12 @@ def request_param(param_dict: Optional[Dict[str, Param]] = None):
         if param_dict:
             _param_dict = param_dict
         else:
-            func_params = inspect.signature(fn).parameters
-            # 获取函数签名,解析参数
-            for arg_name, arg_param in func_params.items():
-                kwargs = {"key": camelcase(arg_name)}
-
-                if arg_param.default is not inspect.Parameter.empty:
-                    kwargs["default"] = arg_param.default
-                if arg_param.annotation is not inspect.Parameter.empty:
-                    kwargs["type"] = arg_param.annotation
-
-                _param_dict[arg_name] = Param(**kwargs)
+            _param_dict = _parse_func_signature(fn)
 
         @wraps(fn)
         def decorator(*args, **kwargs):
-            request_param = _get_request_params(_param_dict)
-            kwargs.update(request_param)
+            _request_param = _get_request_params(_param_dict)
+            kwargs.update(_request_param)
             return fn(*args, **kwargs)
 
         return decorator

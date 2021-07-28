@@ -1,7 +1,7 @@
 import random
 import string
 import time
-from typing import List
+import typing as t
 
 
 def generate_id(size: int = 18) -> int:
@@ -15,7 +15,7 @@ def generate_id(size: int = 18) -> int:
         return random_id
 
 
-def _random_char_list(size: int, char_set: str) -> List[str]:
+def _random_char_list(size: int, char_set: str) -> t.List[str]:
     char_list = random.choices(population=char_set, k=size)
     return char_list
 

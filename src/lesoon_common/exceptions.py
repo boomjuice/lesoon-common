@@ -1,5 +1,5 @@
 """ 异常模块."""
-from typing import Optional
+import typing as t
 
 from .response import Code
 
@@ -19,7 +19,7 @@ class ResourceAttrError(Exception):
 class ServiceError(Exception):
     """服务异常"""
 
-    def __init__(self, code: Code, msg: Optional[str] = None):
+    def __init__(self, code: Code, msg: t.Optional[str] = None):
         super().__init__()
         self.code = code
         self.msg = msg or code.msg

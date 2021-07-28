@@ -1,8 +1,5 @@
 """ 额外类库封装模块. """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
+import typing as t
 
 from flask import current_app
 from flask import make_response
@@ -16,6 +13,7 @@ from flask_sqlalchemy import BaseQuery
 from jose import jwe
 from werkzeug.utils import cached_property
 
+from .dataclass import TokenUser
 from .parse.req import extract_sort_arg
 from .parse.req import extract_where_arg
 from .parse.sqla import parse_multi_condition
@@ -30,12 +28,12 @@ class LesoonRequest(Request):
     PAGE_SIZE_LIMIT = 1000
 
     @cached_property
-    def where(self) -> Dict[str, Any]:
+    def where(self) -> t.Dict[str, t.Any]:
         where = extract_where_arg(self.args.get("where"))
         return where
 
     @cached_property
-    def sort(self) -> List[Tuple[str, int]]:
+    def sort(self) -> t.List[t.Tuple[str, int]]:
         sort = extract_sort_arg(self.args.get("sort"))
         return sort
 
@@ -59,7 +57,7 @@ class LesoonRequest(Request):
         return page_size  # type:ignore
 
     @cached_property
-    def user(self):
+    def user(self) -> TokenUser:
         return current_user
 
 
@@ -110,7 +108,7 @@ class LesoonJwt(JWTManager):
             identity, token_type, claims, fresh, expires_delta, headers
         )
         secret = current_app.config.get("JWT_SECRET_KEY")
-        return jwe.encrypt(jwt_token, key=secret, cty="JWT")
+        return jwe.encrypt(jwt_token, key=secret, cty="JWT").decode()
 
 
 class LesoonDebugTool(DebugToolbarExtension):

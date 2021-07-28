@@ -1,11 +1,8 @@
 """ 基础web组件模块. """
 import logging
 import sys
+import typing as t
 from datetime import timedelta
-from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Union
 
 from flask import current_app
 from flask import Flask
@@ -27,7 +24,7 @@ from .utils.str import camelcase
 from .wrappers import LesoonRequest
 
 
-def handle_exception(error: Exception) -> Union[HTTPException, dict]:
+def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
     if isinstance(error, HTTPException):
         return error
     elif isinstance(error, ServiceError):
@@ -40,7 +37,7 @@ def handle_exception(error: Exception) -> Union[HTTPException, dict]:
 
 
 class LesoonFlask(Flask):
-    default_extensions: Dict[str, Any] = {
+    default_extensions: t.Dict[str, t.Any] = {
         "db": db,
         "ma": ma,
         "ca": ca,
@@ -91,7 +88,7 @@ class LesoonFlask(Flask):
     def __init__(
         self,
         import_name=__package__,
-        extra_extensions: Optional[Dict[str, Any]] = None,
+        extra_extensions: t.Optional[t.Dict[str, t.Any]] = None,
         **kwargs,
     ):
         super().__init__(import_name, **kwargs)

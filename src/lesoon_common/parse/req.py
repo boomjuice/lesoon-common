@@ -1,14 +1,12 @@
 """ 请求参数过滤模块. """
 import ast
 import re
-from typing import Dict
-from typing import List
-from typing import Tuple
+import typing as t
 
 from ..exceptions import ParseError
 
 
-def extract_where_arg(where) -> Dict[str, str]:
+def extract_where_arg(where) -> t.Dict[str, str]:
     if where:
         try:
             return ast.literal_eval(where)
@@ -18,7 +16,7 @@ def extract_where_arg(where) -> Dict[str, str]:
         return dict()
 
 
-def extract_sort_arg(sort) -> List[Tuple[str, int]]:
+def extract_sort_arg(sort) -> t.List[t.Tuple[str, int]]:
     if sort:
         if re.match(r"^[-,\w.]+$", sort):
             arg = []

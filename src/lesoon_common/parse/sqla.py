@@ -3,13 +3,7 @@
 """
 import operator as sqla_op
 import re
-from typing import Any
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Type
-from typing import Union
+import typing as t
 
 from flask_sqlalchemy import Model
 from sqlalchemy.orm import InstrumentedAttribute
@@ -21,12 +15,12 @@ from ..exceptions import ParseError
 from ..utils.str import udlcase
 
 SqlaExp = SqlaExp.BinaryExpression
-SqlaExpList = List[SqlaExp]
+SqlaExpList = t.List[SqlaExp]
 
 
 def parse_multi_condition(
-    where: dict, sort_list: list, models: Set[Type[Model]]
-) -> Tuple[SqlaExpList, SqlaExpList]:
+    where: dict, sort_list: list, models: t.Set[t.Type[Model]]
+) -> t.Tuple[SqlaExpList, SqlaExpList]:
     """多表过滤条件解析."""
     filter_list = list()
     order_list = list()
@@ -39,7 +33,7 @@ def parse_multi_condition(
     return filter_list, order_list
 
 
-def parse_filter(where: dict, model: Type[Model]) -> SqlaExpList:
+def parse_filter(where: dict, model: t.Type[Model]) -> SqlaExpList:
     """过滤条件解析入口.
     : 将python str/json格式的过滤条件转化成sqlalchemy的过滤条件
     :param where: 查询过滤字典 {'a.status_eq': 1,'b.id': 2}
@@ -51,10 +45,10 @@ def parse_filter(where: dict, model: Type[Model]) -> SqlaExpList:
     return _filter
 
 
-def parse_dictionary(where: dict, model: Type[Model]) -> SqlaExpList:
+def parse_dictionary(where: dict, model: t.Type[Model]) -> SqlaExpList:
     """将过滤参数字典转换为sqlalchemy的过滤条件.
 
-    :param filter_dict: 待转换字典 {"id_eq":"1"},{"a.id_lte":"2"}...
+    :param where: 待转换字典 {"id_eq":"1"},{"a.id_lte":"2"}...
     :param model: sqlalchemy.Model
     """
     if len(where) == 0:
@@ -74,7 +68,7 @@ def parse_dictionary(where: dict, model: Type[Model]) -> SqlaExpList:
 
 
 def parse_suffix_operation(
-    column: str, value: Union[int, str, List[Any]], model: Type[Model]
+    column: str, value: t.Union[int, str, t.List[t.Any]], model: t.Type[Model]
 ) -> SqlaExp:
     op_mapper = {
         "eq": sqla_op.eq,
@@ -98,7 +92,7 @@ def parse_suffix_operation(
                 return getattr(attr, f"{op}_")(value)
             elif isinstance(value, str):
                 # 逗号分隔字符串
-                value_list: List[str] = value.strip().split(",")
+                value_list: t.List[str] = value.strip().split(",")
                 return getattr(attr, f"{op}_")(value_list)
             else:
                 # 不支持in的类型
@@ -114,7 +108,7 @@ def parse_suffix_operation(
             return sqla_op.eq(attr, value)
 
 
-def parse_prefix_alias(name: str, model: Type[Model]) -> Optional[str]:
+def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
     """匹配过滤参数的表别名前缀.
     :param model: sqlalchemy.Model
     :param name: model.field.name
@@ -135,7 +129,7 @@ def parse_prefix_alias(name: str, model: Type[Model]) -> Optional[str]:
         return name
 
 
-def _parse_attribute_name(name: str, model: Type[Model]) -> InstrumentedAttribute:
+def _parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttribute:
     """根据 model,name获取模型的字段对象.
     :param model: sqlalchemy.Model
     :param name: 字段名
@@ -146,7 +140,7 @@ def _parse_attribute_name(name: str, model: Type[Model]) -> InstrumentedAttribut
     return attr
 
 
-def parse_sort(sort_list: List[list], model: Type[Model]) -> SqlaExpList:
+def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
     """排序解析.
     :param sort_list: [('create_time',1),('status',-1)]
     :param model: flask_sqlalchemy.Model
@@ -167,7 +161,7 @@ def parse_sort(sort_list: List[list], model: Type[Model]) -> SqlaExpList:
     return conditions
 
 
-def parse_related_models(query: Query) -> Set[Model]:
+def parse_related_models(query: Query) -> t.Set[Model]:
     """获取Query对象查询涉及的所有表"""
     related_models = set()
     # 根据查询列查找涉及表实体

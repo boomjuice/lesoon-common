@@ -1,7 +1,6 @@
 """ 通用Model基类模块. """
 from datetime import datetime
 
-from flask_jwt_extended import get_current_user
 from sqlalchemy import Column
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.dialects.mysql import TINYINT
@@ -10,21 +9,9 @@ from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 
 from ..extensions import db
+from ..globals import current_user
 
 Model = db.Model
-
-
-def current_user_attr(key: str, default=None):
-    def warpper():
-        try:
-            return get_current_user()[key]
-        except RuntimeError:
-            if default is not None:
-                return default
-            else:
-                raise ValueError(f"{key}的默认值不允许为None值")
-
-    return warpper
 
 
 class IdModel(Model):  # type:ignore
@@ -37,7 +24,7 @@ class CompanyMixin:
         BIGINT(20),
         nullable=False,
         comment="公司ID",
-        default=current_user_attr("companyId"),
+        default=lambda: current_user.company_id,
     )
 
 
@@ -60,7 +47,7 @@ class FixedOpeartorMixin:
         String(20),
         nullable=False,
         comment="创建人",
-        default=current_user_attr("userName", ""),
+        default=lambda: current_user.user_name,
     )
     create_time = Column(
         DateTime,
@@ -73,7 +60,7 @@ class FixedOpeartorMixin:
         String(20),
         nullable=True,
         comment="修改人",
-        default=current_user_attr("userName", ""),
+        default=lambda: current_user.user_name,
     )
     modify_time = Column(DateTime, nullable=True, comment="修改时间", onupdate=datetime.now)
     update_time = Column(

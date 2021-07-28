@@ -1,10 +1,7 @@
 """资源基类模块.
 提供对资源的通用的增删改查
 """
-from typing import Any
-from typing import List
-from typing import Tuple
-from typing import Union
+import typing as t
 
 from flask.views import MethodViewType
 from flask_restful import Resource
@@ -17,6 +14,7 @@ from .globals import request
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
 from .response import success_response
+from .utils.jwt import jwt_required
 from .wrappers import LesoonQuery
 
 
@@ -40,11 +38,11 @@ class BaseResource(Resource):
 
     @classmethod
     def select_filter(cls) -> LesoonQuery:
-        query: LesoonQuery = cls.__model__.query  # type:ignore[attr-defined]
+        query = cls.__model__.query  # type:ignore[attr-defined]
         return query.with_request_condition()
 
     @classmethod
-    def page_get(cls) -> Tuple[Any, int]:
+    def page_get(cls) -> t.Tuple[t.Any, int]:
         query: LesoonQuery = cls.select_filter()
         if request.if_page:
             page_query = query.paginate()
@@ -75,24 +73,24 @@ class BaseResource(Resource):
         return _obj
 
     @classmethod
-    def before_create_many(cls, data_list: List[dict]):
+    def before_create_many(cls, data_list: t.List[dict]):
         """批量新增前操作."""
         pass
 
     @classmethod
-    def after_create_many(cls, data_list: List[dict], _objs: List[BaseModel]):
+    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
         """批量新增后操作."""
         pass
 
     @classmethod
-    def create_many(cls, data_list: List[dict]):
+    def create_many(cls, data_list: t.List[dict]):
         """批量新增资源."""
         _objs = cls.get_schema().load(data_list, many=True)
         db.session.bulk_save_objects(_objs)
         return _objs
 
     @classmethod
-    def create(cls, data: Union[dict, List[dict]]):
+    def create(cls, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
         if isinstance(data, list):
             cls.before_create_many(data)
@@ -121,14 +119,14 @@ class BaseResource(Resource):
         return _obj
 
     @classmethod
-    def update_many(cls, data_list: List[dict]):
+    def update_many(cls, data_list: t.List[dict]):
         """批量更新资源."""
         for data in data_list:
             cls.update_one(data=data)
         return None
 
     @classmethod
-    def update(cls, data: Union[dict, List[dict]]):
+    def update(cls, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
         if isinstance(data, list):
             result = cls.update_many(data)
@@ -139,7 +137,7 @@ class BaseResource(Resource):
         return result
 
     @classmethod
-    def delete_in(cls, ids: List[str]):
+    def delete_in(cls, ids: t.List[str]):
         if not ids:
             return
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
@@ -199,6 +197,8 @@ class LesoonResourceItem(BaseResource):
 
 class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     if_item_lookup = True
+
+    method_decorators = [jwt_required()]
 
     def get(self):
         results, total = self.page_get()
