@@ -6,7 +6,7 @@ from marshmallow import EXCLUDE
 from .utils.str import camelcase
 
 
-@dataclass
+@dataclass(frozen=True)
 class TokenUser:
     # 用户id
     id: int
@@ -44,6 +44,13 @@ class TokenUser:
     @classmethod
     def load(cls, data, **kwargs):
         return TokenUserSchema().load(data, **kwargs)
+
+    @classmethod
+    def clone(cls, user: object):
+        init_kwargs = dict()
+        for key in cls.__annotations__.keys():
+            init_kwargs[key] = user.__dict__.get(key)
+        return TokenUser(**init_kwargs)
 
     def to_dict(self, **kwargs):
         return TokenUserSchema().dump(self.__dict__, **kwargs)

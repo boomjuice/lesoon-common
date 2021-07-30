@@ -1,12 +1,32 @@
 import pytest
 
+from lesoon_common.utils.base import random_alpha_numeric
 
-class TestResource:
+from .api import api
+from .api import bp
+from .api import UserResource
+from .models import User
+
+
+class TestLesoonResource:
     @classmethod
     @pytest.fixture(autouse=True)
     def setup_class(cls, app, db):
-        pass
+        api.register_resource(UserResource, "/User", endpoint="user")
+        app.register_blueprint(bp)
 
-    def test_resource_url_rule(self, app):
-        print(app.url_map)
-        assert 1
+    def test_register_resource(self, app):
+        url_rule = app.url_map._rules
+        rules = [_.rule for _ in url_rule]
+        assert "/User" in rules
+        assert "/User/<int:id>" in rules
+
+    @staticmethod
+    def generate_random_user(size: int):
+        users = list()
+        for i in range(size):
+            user = {"id": i,
+                    "login_name": random_alpha_numeric(10),
+                    "user_name": random_alpha_numeric(10)}
+            users.append(user)
+        return users

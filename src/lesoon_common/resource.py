@@ -44,16 +44,10 @@ class BaseResource(Resource):
     @classmethod
     def page_get(cls) -> t.Tuple[t.Any, int]:
         query: LesoonQuery = cls.select_filter()
-        if request.if_page:
-            page_query = query.paginate()
-            result = page_query.items
-            total = page_query.total
-        else:
-            result = query.all()
-            total = query.order_by(None).count()
+        page_query = query.paginate()
 
-        results = cls.get_schema().dump(result, many=True)
-        return results, total
+        results = cls.get_schema().dump(page_query.items, many=True)
+        return results, page_query.total
 
     @classmethod
     def before_create_one(cls, data: dict):

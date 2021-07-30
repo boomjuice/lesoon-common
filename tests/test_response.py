@@ -1,6 +1,21 @@
 from lesoon_common.response import Response
 from lesoon_common.response import ResponseCode
 from lesoon_common.response import success_response
+from lesoon_common.response import error_response
+
+
+
+class TestResponse:
+
+    def test_load(self):
+        resp_dict = {"flag": {"retCode": "1234",
+                              "retMsg": "test"},
+                     "data": {"a": 1},
+                     "total": 1}
+        resp = Response.load(resp_dict)
+        assert resp.code == "1234"
+        assert resp.data == {"a": 1}
+        assert resp.total == 1
 
 
 class TestResponseUtils:
@@ -23,3 +38,12 @@ class TestResponseUtils:
         result = "test"
         r = success_response(result=result)
         assert r["data"] == result
+
+    def test_success_response_custom_key(self):
+        r = success_response(total=123)
+        assert r["total"] == 123
+
+    def test_error_response_null(self):
+        r = Response.load(error_response(None))
+        assert r.code == str(ResponseCode.Error.code)
+

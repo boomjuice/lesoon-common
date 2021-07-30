@@ -10,6 +10,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import expression as SqlaExp
+from sqlalchemy.sql.annotation import Annotated
 
 from ..exceptions import ParseError
 from ..utils.str import udlcase
@@ -116,9 +117,15 @@ def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
     name_split = name.split(".")
     if len(name_split) > 2:
         raise ParseError(f"过滤列名不合法: {name}")
-    elif len(name_split) == 2 and isinstance(model, AliasedClass):
+    elif len(name_split) == 2:
+        if isinstance(model, AliasedClass):
+            model_alias = model._aliased_insp.name
+        elif isinstance(model, Annotated):
+            model_alias = model.name
+        else:
+            model_alias = None
         alias, column = name_split
-        if alias == model._aliased_insp.name:  # noqa
+        if alias == model_alias:  # noqa
             # 过滤参数别名与model别名匹配
             return column
         else:
@@ -135,8 +142,10 @@ def _parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttrib
     :param name: 字段名
     :return: 返回字段名对应的Column实例对象
     """
-
-    attr = getattr(model, udlcase(name))
+    if isinstance(model, Annotated):
+        attr = getattr(model.columns, udlcase(name))
+    else:
+        attr = getattr(model, udlcase(name))
     return attr
 
 
@@ -170,5 +179,7 @@ def parse_related_models(query: Query) -> t.Set[Model]:
 
     # 根据关联查找关联表实体
     for join in query._legacy_setup_joins:
-        related_models.add(join[0].entity_namespace)
+        join_obj = join[0].entity_namespace
+        if isinstance(join_obj, t.Hashable):
+            related_models.add(join_obj)
     return related_models
