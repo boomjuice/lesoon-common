@@ -20,21 +20,15 @@ from flask_jwt_extended.view_decorators import _load_user
 from flask_jwt_extended.view_decorators import _verify_token_is_fresh
 from jose import jwe
 
-from ..dataclass import TokenUser
-from ..response import error_response
-from ..response import ResponseCode
 
-
-def user_lookup_callback(jwt_headers, jwt_data) -> TokenUser:
-    return TokenUser.load(jwt_data["userInfo"])
-
-
-def invalid_token_callback(jwt_headers, jwt_data):
-    return error_response(code=ResponseCode.TokenInValid)
-
-
-def expired_token_callback(jwt_headers, jwt_data):
-    return error_response(code=ResponseCode.TokenExpired)
+def get_token():
+    token = getattr(_request_ctx_stack.top, "token", None)
+    if token is None:
+        raise RuntimeError(
+            "You must call `@jwt_required()` or `verify_jwt_in_request()` "
+            "before using this method"
+        )
+    return token
 
 
 def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):
@@ -63,7 +57,7 @@ def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=
         return
 
     try:
-        encoded_token, jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
+        orignal_token, jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
             locations, fresh, refresh=refresh
         )
     except NoAuthorizationError:
@@ -73,6 +67,7 @@ def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=
         _request_ctx_stack.top.jwt_header = {}
         _request_ctx_stack.top.jwt_user = {"loaded_user": None}
         _request_ctx_stack.top.jwt_location = None
+        _request_ctx_stack.top.token = None
         return
 
     # Save these at the very end so that they are only saved in the requet
@@ -81,6 +76,7 @@ def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=
     _request_ctx_stack.top.jwt_header = jwt_header
     _request_ctx_stack.top.jwt = jwt_data
     _request_ctx_stack.top.jwt_location = jwt_location
+    _request_ctx_stack.top.token = orignal_token
 
     return jwt_header, jwt_data
 
@@ -161,8 +157,8 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     jwt_location = None
     for location, get_encoded_token_function in get_encoded_token_functions:
         try:
-            encoded_token, csrf_token = get_encoded_token_function()
-            encoded_token = jwe.decrypt(encoded_token, config.decode_key)
+            orignal_token, csrf_token = get_encoded_token_function()
+            encoded_token = jwe.decrypt(orignal_token, config.decode_key)
             decoded_token = decode_token(encoded_token, csrf_token)
             jwt_location = location
             jwt_header = get_unverified_jwt_headers(encoded_token)
@@ -190,4 +186,4 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     verify_token_not_blocklisted(jwt_header, decoded_token)
     custom_verification_for_token(jwt_header, decoded_token)
 
-    return encoded_token, decoded_token, jwt_header, jwt_location
+    return orignal_token, decoded_token, jwt_header, jwt_location

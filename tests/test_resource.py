@@ -1,11 +1,9 @@
 import pytest
 
-from lesoon_common.utils.base import random_alpha_numeric
-
 from .api import api
 from .api import bp
 from .api import UserResource
-from .models import User
+from lesoon_common.utils.base import random_alpha_numeric
 
 
 class TestLesoonResource:
@@ -25,8 +23,10 @@ class TestLesoonResource:
     def generate_random_user(size: int):
         users = list()
         for i in range(size):
-            user = {"id": i,
-                    "login_name": random_alpha_numeric(10),
-                    "user_name": random_alpha_numeric(10)}
+            user = {
+                "id": i,
+                "login_name": random_alpha_numeric(10),
+                "user_name": random_alpha_numeric(10),
+            }
             users.append(user)
         return users

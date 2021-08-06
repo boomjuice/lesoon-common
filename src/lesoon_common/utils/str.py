@@ -15,4 +15,4 @@ def udlcase(hump_str: str):
     if not isinstance(hump_str, str):
         raise TypeError("udlcase() 只能接受str类型")
     udl_str = re.sub(r"([A-Z])", r"_\1", hump_str).lower()
-    return udl_str
+    return udl_str.strip("_")

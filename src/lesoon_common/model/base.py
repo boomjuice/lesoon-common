@@ -42,7 +42,7 @@ class CommonMixin(StatusMixin, RemarkMixin):
     pass
 
 
-class FixedOpeartorMixin:
+class FixedOperatorMixin:
     creator = Column(
         String(20),
         nullable=False,
@@ -60,7 +60,7 @@ class FixedOpeartorMixin:
         String(20),
         nullable=True,
         comment="修改人",
-        default=lambda: current_user.user_name,
+        onupdate=lambda: current_user.user_name,
     )
     modify_time = Column(DateTime, nullable=True, comment="修改时间", onupdate=datetime.now)
     update_time = Column(
@@ -72,7 +72,7 @@ class FixedOpeartorMixin:
     )
 
 
-class BaseModel(IdModel, FixedOpeartorMixin):
+class BaseModel(IdModel, FixedOperatorMixin):
     __abstract__ = True
 
 

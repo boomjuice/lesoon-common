@@ -21,6 +21,7 @@ from .resource import LesoonResourceItem
 from .response import error_response
 from .response import ResponseCode
 from .utils.str import camelcase
+from .view import LesoonView
 from .wrappers import LesoonRequest
 
 
@@ -123,22 +124,24 @@ class LesoonFlask(Flask):
 
 
 class LesoonApi(Api):
-    def add_resource_item(self, resource, *urls, **kwargs):
+    def add_resource_item(self, resource: t.Type[LesoonResource], *urls, **kwargs):
         """注册资源项目."""
         # 生成resourceItem类
         cls_attrs = {"__model__": resource.__model__, "__schema__": resource.__schema__}
-        resource_item_cls = type(f"{resource}Item", (LesoonResourceItem,), cls_attrs)
+        resource_item_cls: t.Type[LesoonResourceItem] = type(
+            f"{resource}Item", (LesoonResourceItem,), cls_attrs
+        )
         ri_cls = resource.item_cls = resource_item_cls
 
         # 生成resourceItem 路由参数
-        item_endpoint = kwargs.get("endpoint") or camelcase(resource.__class__.lower())
+        item_endpoint = kwargs.get("endpoint") or camelcase(resource.__name__)
         kwargs["endpoint"] = item_endpoint + "_item"
         kwargs["methods"] = ri_cls.item_lookup_methods
         url_suffix = f"/<{ri_cls.item_lookup_type}:{ri_cls.item_lookup_field}>"
         item_urls = [url + url_suffix for url in urls]
         self.add_resource(resource.item_cls, *item_urls, **kwargs)
 
-    def register_resource(self, resource, *urls, **kwargs):
+    def register_resource(self, resource: t.Type[LesoonResource], *urls, **kwargs):
         """注册资源.
         如果资源设置item_lookup,默认为True,则会追加注册item资源
         """
@@ -146,3 +149,8 @@ class LesoonApi(Api):
             if getattr(resource, "if_item_lookup", True):
                 self.add_resource_item(resource, *urls, **kwargs)
         self.add_resource(resource, *urls, **kwargs)
+
+    def register_view(self, view_class: t.Type[LesoonView], url, **kwargs):
+        if not issubclass(view_class, LesoonView):
+            raise TypeError("reigster_view中的view_class必须为LesoonView的子类")
+        view_class.register(self.app, url, **kwargs)

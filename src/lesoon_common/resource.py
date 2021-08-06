@@ -55,11 +55,6 @@ class BaseResource(Resource):
         pass
 
     @classmethod
-    def after_create_one(cls, data: dict, _obj: BaseModel):
-        """新增后操作."""
-        pass
-
-    @classmethod
     def create_one(cls, data: dict):
         """新增单条资源."""
         _obj = cls.get_schema().load(data)
@@ -67,13 +62,13 @@ class BaseResource(Resource):
         return _obj
 
     @classmethod
-    def before_create_many(cls, data_list: t.List[dict]):
-        """批量新增前操作."""
+    def after_create_one(cls, data: dict, _obj: BaseModel):
+        """新增后操作."""
         pass
 
     @classmethod
-    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
-        """批量新增后操作."""
+    def before_create_many(cls, data_list: t.List[dict]):
+        """批量新增前操作."""
         pass
 
     @classmethod
@@ -82,6 +77,11 @@ class BaseResource(Resource):
         _objs = cls.get_schema().load(data_list, many=True)
         db.session.bulk_save_objects(_objs)
         return _objs
+
+    @classmethod
+    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
+        """批量新增后操作."""
+        pass
 
     @classmethod
     def create(cls, data: t.Union[dict, t.List[dict]]):
@@ -208,10 +208,12 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     def delete(self):
         try:
-            ids = request.args.get("ids") or request.json.get("ids")
+            if ids := request.args.get("ids"):
+                ids = ids.strip().split(",")
+            else:
+                ids = request.json
         except AttributeError:
             raise BadRequestKeyError("缺少请求参数ids")
-        ids = ids.strip().split(",")
         if any(ids):
             self.__class__.delete_in(ids)
             db.session.commit()

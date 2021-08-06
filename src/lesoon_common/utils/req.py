@@ -9,19 +9,19 @@ from ..utils.str import camelcase
 
 
 class Param:
-    PARAM_MISS_CODE = {
+    param_miss_code = {
         "args": ResponseCode.ReqParamMiss,
         "json": ResponseCode.ReqDataMiss,
         "form": ResponseCode.ReqFormMiss,
     }
 
-    PARAM_ERROR_CODE = {
+    param_error_code = {
         "args": ResponseCode.ReqParamError,
         "json": ResponseCode.ReqDataError,
         "form": ResponseCode.ReqFormError,
     }
 
-    REQUEST_LOCATION = ("args", "json", "form")
+    allow_location = ("args", "json", "form")
 
     def __init__(
         self,
@@ -38,14 +38,14 @@ class Param:
 
         self.deserialize = deserialize or type
 
-        if loc not in self.REQUEST_LOCATION:
-            raise ValueError(f"{loc}是{self.REQUEST_LOCATION}中的值")
+        if loc not in self.allow_location:
+            raise ValueError(f"{loc}是{self.allow_location}中的值")
         self.loc = loc
 
         self.msg = msg or f"传参异常:{key}"
 
-        self.miss_code = self.PARAM_MISS_CODE[loc]
-        self.error_code = self.PARAM_ERROR_CODE[loc]
+        self.miss_code = self.param_miss_code[loc]
+        self.error_code = self.param_error_code[loc]
 
 
 def _get_request_params(param_dict: t.Dict[str, Param]) -> dict:

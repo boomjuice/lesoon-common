@@ -20,9 +20,9 @@ from .parse.req import extract_sort_arg
 from .parse.req import extract_where_arg
 from .parse.sqla import parse_multi_condition
 from .parse.sqla import parse_related_models
-from .utils.jwt import expired_token_callback
-from .utils.jwt import invalid_token_callback
-from .utils.jwt import user_lookup_callback
+from .response import error_response
+from .response import ResponseCode
+from .utils.jwt import get_token
 
 
 class LesoonRequest(Request):
@@ -32,6 +32,9 @@ class LesoonRequest(Request):
     @cached_property
     def where(self) -> t.Dict[str, t.Any]:
         where = extract_where_arg(self.args.get("where"))
+        if not where and isinstance(request.json, dict):
+            # where条件对于query_string过长的情况
+            where = request.json.get("where", where)
         return where
 
     @cached_property
@@ -45,14 +48,14 @@ class LesoonRequest(Request):
         return if_page
 
     @cached_property
-    def page(self) -> int:
+    def page(self):
         page = self.args.get("page", default=1, type=int)
         if page < 1:
             page = 1
-        return page  # type:ignore
+        return page
 
     @cached_property
-    def page_size(self) -> int:
+    def page_size(self):
         page_size = self.args.get(
             "pageSize", default=self.__class__.PAGE_SIZE_DEFAULT, type=int
         )
@@ -68,13 +71,17 @@ class LesoonRequest(Request):
     def user(self) -> TokenUser:
         return current_user
 
+    @cached_property
+    def token(self) -> str:
+        return get_token()
+
 
 class LesoonQuery(BaseQuery):
     def paginate(
         self,
         if_page: t.Optional[bool] = None,
         page: t.Optional[int] = None,
-        per_page: t.Optional[int] = None
+        per_page: t.Optional[int] = None,
     ):
         """分页查询.
         :param if_page: 是否分页
@@ -117,7 +124,17 @@ class LesoonQuery(BaseQuery):
 class LesoonJwt(JWTManager):
     def __init__(self, app=None):
         super().__init__(app=app)
+
         # flask_jwt_extended.current_user()的取值函数
+        def user_lookup_callback(jwt_headers, jwt_data) -> TokenUser:
+            return TokenUser.load(jwt_data["userInfo"])
+
+        def invalid_token_callback(jwt_headers, jwt_data):
+            return error_response(code=ResponseCode.TokenInValid)
+
+        def expired_token_callback(jwt_headers, jwt_data):
+            return error_response(code=ResponseCode.TokenExpired)
+
         self._user_lookup_callback = user_lookup_callback
         self._invalid_token_callback = invalid_token_callback
         self._expired_token_callback = expired_token_callback

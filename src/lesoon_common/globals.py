@@ -5,6 +5,7 @@ from flask_jwt_extended.utils import get_current_user
 from werkzeug.local import LocalProxy
 
 from .dataclass import TokenUser
+from .utils.jwt import get_token
 from .wrappers import LesoonRequest
 
 current_user: TokenUser = LocalProxy(
@@ -14,3 +15,5 @@ current_user: TokenUser = LocalProxy(
 request: LesoonRequest = LocalProxy(
     partial(_lookup_req_object, "request")
 )  # type: ignore
+
+token: str = LocalProxy(lambda: get_token())  # type:ignore

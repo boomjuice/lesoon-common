@@ -50,7 +50,7 @@ class TokenUser:
         init_kwargs = dict()
         for key in cls.__annotations__.keys():
             init_kwargs[key] = user.__dict__.get(key)
-        return TokenUser(**init_kwargs)
+        return TokenUser(**init_kwargs)  # type:ignore[arg-type]
 
     def to_dict(self, **kwargs):
         return TokenUserSchema().dump(self.__dict__, **kwargs)

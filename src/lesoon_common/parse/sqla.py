@@ -1,6 +1,7 @@
 """ Sqlalchemy解析模块.
 将python对象解析成sqlalchemy对象以供查询
 """
+import abc
 import operator as sqla_op
 import re
 import typing as t
@@ -35,18 +36,6 @@ def parse_multi_condition(
 
 
 def parse_filter(where: dict, model: t.Type[Model]) -> SqlaExpList:
-    """过滤条件解析入口.
-    : 将python str/json格式的过滤条件转化成sqlalchemy的过滤条件
-    :param where: 查询过滤字典 {'a.status_eq': 1,'b.id': 2}
-    :param model: sqlalchemy.Model
-    """
-    _filter = []
-    if isinstance(where, dict) and len(where):
-        _filter = parse_dictionary(where, model)
-    return _filter
-
-
-def parse_dictionary(where: dict, model: t.Type[Model]) -> SqlaExpList:
     """将过滤参数字典转换为sqlalchemy的过滤条件.
 
     :param where: 待转换字典 {"id_eq":"1"},{"a.id_lte":"2"}...
@@ -68,10 +57,45 @@ def parse_dictionary(where: dict, model: t.Type[Model]) -> SqlaExpList:
     return conditions
 
 
-def parse_suffix_operation(
-    column: str, value: t.Union[int, str, t.List[t.Any]], model: t.Type[Model]
-) -> SqlaExp:
-    op_mapper = {
+def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
+    """排序解析.
+    :param sort_list: [('create_time',1),('status',-1)]
+    :param model: flask_sqlalchemy.Model
+    :return [create_time,status.desc()]
+    """
+    conditions: SqlaExpList = list()
+    if not isinstance(sort_list, list) or sort_list is None:
+        return conditions
+    for sort_pair in sort_list:
+        col, order = sort_pair[0], sort_pair[-1]
+        col = parse_prefix_alias(col, model)
+        if not col:
+            continue
+        attr = _parse_attribute_name(col, model)
+        if order == -1:
+            attr = attr.desc()
+        conditions.append(attr)
+    return conditions
+
+
+class SqlaOpParser(metaclass=abc.ABCMeta):
+    def __init__(
+        self,
+        column: InstrumentedAttribute,
+        operate: str,
+        value: t.Union[int, str, t.List[t.Any]],
+    ):
+        self.column = column
+        self.operate = operate
+        self.value = value
+
+    @abc.abstractmethod
+    def parse(self):
+        pass
+
+
+class CmprParser(SqlaOpParser):
+    comparison_mapper = {
         "eq": sqla_op.eq,
         "ne": sqla_op.ne,
         "lt": sqla_op.lt,
@@ -79,34 +103,61 @@ def parse_suffix_operation(
         "lte": sqla_op.le,
         "gte": sqla_op.ge,
     }
-    if m := re.match(r"(?P<col>[\w\\.]+)_(?P<op>[\w]+)", column):
-        col, op = m.group("col"), m.group("op")
-        attr = _parse_attribute_name(col, model)
-        if op in op_mapper:
-            return op_mapper[op](attr, value)
-        elif op == "like":
-            value = value if str(value).count("%") else f"%{value}%"
-            return attr.like(value)
-        elif op in ("in", "notin"):
-            if isinstance(value, list):
-                # 数组
-                return getattr(attr, f"{op}_")(value)
-            elif isinstance(value, str):
-                # 逗号分隔字符串
-                value_list: t.List[str] = value.strip().split(",")
-                return getattr(attr, f"{op}_")(value_list)
-            else:
-                # 不支持in的类型
-                raise ParseError(f"in不支持的类型{value}:{type(value)}")
+
+    def parse(self):
+        cmpr_op = self.comparison_mapper[self.operate]
+        return cmpr_op(self.column, self.value)
+
+
+class InParser(SqlaOpParser):
+    in_mapper = {"in": "in_", "notIn": "notin_"}
+
+    def parse(self):
+        attr_op = self.in_mapper[self.operate]
+        if isinstance(self.value, list):
+            # 数组
+            return getattr(self.column, attr_op)(self.value)
+        elif isinstance(self.value, str):
+            # 逗号分隔字符串
+            value_list: t.List[str] = self.value.strip().split(",")
+            return getattr(self.column, attr_op)(value_list)
+        else:
+            raise ParseError(f"{attr_op} 不支持的类型{self.value}:{type(self.value)}")
+
+
+class LikeParser(SqlaOpParser):
+    like_mapper = {
+        "like": "like",
+        "ilike": "ilike",
+        "notLike": "not_like",
+        "notIlike": "not_ilike",
+    }
+
+    def parse(self):
+        attr_op = self.like_mapper[self.operate]
+        value = self.value if str(self.value).count("%") else f"%{self.value}%"
+        return getattr(self.column, attr_op)(value)
+
+
+class OpParserFactory:
+    @classmethod
+    def create(
+        cls,
+        column: InstrumentedAttribute,
+        operate: str,
+        value: t.Union[int, str, t.List[t.Any]],
+    ) -> SqlaOpParser:
+        if operate in CmprParser.comparison_mapper:
+            return CmprParser(column, operate, value)
+
+        elif operate.lower().count("like"):
+            return LikeParser(column, operate, value)
+
+        elif operate.lower().count("in"):
+            return InParser(column, operate, value)
         else:
             # 未定义的查询操作
             raise ParseError(f"无法解析的查询参数 {column}:{value}")
-    else:
-        attr = _parse_attribute_name(column, model)
-        if isinstance(value, list):
-            return attr.in_(value)
-        else:
-            return sqla_op.eq(attr, value)
 
 
 def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
@@ -136,6 +187,21 @@ def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
         return name
 
 
+def parse_suffix_operation(
+    column: str, value: t.Union[int, str, t.List[t.Any]], model: t.Type[Model]
+) -> SqlaExp:
+    if m := re.match(r"(?P<col>[\w\\.]+)_(?P<op>[\w]+)", column):
+        col, op = m.group("col"), m.group("op")
+        attr = _parse_attribute_name(col, model)
+        return OpParserFactory.create(attr, op, value).parse()
+    else:
+        attr = _parse_attribute_name(column, model)
+        if isinstance(value, list):
+            return attr.in_(value)
+        else:
+            return sqla_op.eq(attr, value)
+
+
 def _parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttribute:
     """根据 model,name获取模型的字段对象.
     :param model: sqlalchemy.Model
@@ -147,27 +213,6 @@ def _parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttrib
     else:
         attr = getattr(model, udlcase(name))
     return attr
-
-
-def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
-    """排序解析.
-    :param sort_list: [('create_time',1),('status',-1)]
-    :param model: flask_sqlalchemy.Model
-    :return [create_time,status.desc()]
-    """
-    conditions: SqlaExpList = list()
-    if not isinstance(sort_list, list) or sort_list is None:
-        return conditions
-    for sort_pair in sort_list:
-        col, order = sort_pair[0], sort_pair[-1]
-        col = parse_prefix_alias(col, model)
-        if not col:
-            continue
-        attr = _parse_attribute_name(col, model)
-        if order == -1:
-            attr = attr.desc()
-        conditions.append(attr)
-    return conditions
 
 
 def parse_related_models(query: Query) -> t.Set[Model]:
