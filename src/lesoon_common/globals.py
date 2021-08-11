@@ -4,7 +4,7 @@ from flask.globals import _lookup_req_object
 from flask_jwt_extended.utils import get_current_user
 from werkzeug.local import LocalProxy
 
-from .dataclass import TokenUser
+from .dataclass.base import TokenUser
 from .utils.jwt import get_token
 from .wrappers import LesoonRequest
 

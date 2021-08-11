@@ -23,8 +23,7 @@ class TestSQLParser:
         pass
 
     def test_wrong_attribute(self):
-        with pytest.raises(AttributeError):
-            parse_suffix_operation("a", "1", User)
+        assert parse_suffix_operation("a", "1", User) is None
 
     def test_wrong_operation(self):
         with pytest.raises(ParseError):
@@ -75,9 +74,19 @@ class TestSQLParser:
         r = parse_suffix_operation("status_like", "%1", User)
         assert expected_expression.compare(r) is True
 
+    def test_operation_not_like(self):
+        expected_expression = User.status.not_like("%1")
+        r = parse_suffix_operation("status_notLike", "%1", User)
+        assert expected_expression.compare(r) is True
+
     def test_operation_in(self):
         expected_expression = User.status.in_(["1", "2", "3"])
         r = parse_suffix_operation("status_in", "1,2,3", User)
+        assert expected_expression.compare(r) is True
+
+    def test_operation_notin(self):
+        expected_expression = User.status.notin_(["1", "2", "3"])
+        r = parse_suffix_operation("status_notIn", "1,2,3", User)
         assert expected_expression.compare(r) is True
 
     def test_filter_null(self):

@@ -15,7 +15,6 @@ from flask_sqlalchemy import Pagination
 from jose import jwe
 from werkzeug.utils import cached_property
 
-from .dataclass import TokenUser
 from .parse.req import extract_sort_arg
 from .parse.req import extract_where_arg
 from .parse.sqla import parse_multi_condition
@@ -68,7 +67,7 @@ class LesoonRequest(Request):
         return page_size  # type:ignore
 
     @cached_property
-    def user(self) -> TokenUser:
+    def user(self):
         return current_user
 
     @cached_property
@@ -82,6 +81,7 @@ class LesoonQuery(BaseQuery):
         if_page: t.Optional[bool] = None,
         page: t.Optional[int] = None,
         per_page: t.Optional[int] = None,
+        if_count: bool = True,
     ):
         """分页查询.
         :param if_page: 是否分页
@@ -98,7 +98,10 @@ class LesoonQuery(BaseQuery):
         else:
             items = self.all()
 
-        total = self.order_by(None).count()
+        if if_count:
+            total = self.order_by(None).count()
+        else:
+            total = 0
 
         return Pagination(self, page, per_page, total, items)
 
@@ -110,8 +113,8 @@ class LesoonQuery(BaseQuery):
         if any([add_where, add_sort]):
             related_models = parse_related_models(self)
             where_list, sort_list = parse_multi_condition(
-                request.where,  # type:ignore
-                request.sort,  # type:ignore
+                request.where.copy(),  # type:ignore
+                request.sort.copy(),  # type:ignore
                 related_models,
             )
             if add_where:
@@ -126,7 +129,9 @@ class LesoonJwt(JWTManager):
         super().__init__(app=app)
 
         # flask_jwt_extended.current_user()的取值函数
-        def user_lookup_callback(jwt_headers, jwt_data) -> TokenUser:
+        def user_lookup_callback(jwt_headers, jwt_data):
+            from .dataclass.base import TokenUser
+
             return TokenUser.load(jwt_data["userInfo"])
 
         def invalid_token_callback(jwt_headers, jwt_data):

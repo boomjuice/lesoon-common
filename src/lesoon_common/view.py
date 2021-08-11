@@ -9,8 +9,11 @@ from flask import request
 from flask.wrappers import ResponseBase
 from flask_restful import unpack
 
-from .extensions import db
+from .dataclass.resource import ImportData
+from .exceptions import RequestError
 from .resource import BaseResource
+from .resource import LesoonResource
+from .response import ResponseCode
 from .response import success_response
 from .utils.jwt import jwt_required
 from .utils.req import Param
@@ -127,19 +130,28 @@ class BaseView:
 
 
 class LesoonView(BaseView):
+    resource: t.Type[LesoonResource] = None  # type:ignore
+
     method_decorators = [jwt_required()]
 
     @route("/save", methods=["POST"])
     @request_param(
         {
-            "insert_rows": Param(key="insertRows", loc="json", type=list),
-            "update_rows": Param(key="updateRows", loc="json", type=list),
-            "delete_rows": Param(key="deleteRows", loc="json", type=list),
+            "insert_rows": Param(key="insertRows", loc="body", type=list),
+            "update_rows": Param(key="updateRows", loc="body", type=list),
+            "delete_rows": Param(key="deleteRows", loc="body", type=list),
         }
     )
     def union_operate(self, insert_rows: list, update_rows: list, delete_rows: list):
-        self.resource.create_many(insert_rows)
-        self.resource.update_many(update_rows)
-        self.resource.delete_in(delete_rows)
-        db.session.commit()
+        """增删改合并操作."""
+        self.resource.union_operate(insert_rows, update_rows, delete_rows)
         return success_response()
+
+    @route("/importData", methods=["POST"])
+    @request_param({"req_data": Param(loc="body")})
+    def import_data(self, req_data: dict):
+        """数据导入."""
+        import_data: ImportData = ImportData.load(req_data)
+        if not import_data.data_list:
+            raise RequestError(code=ResponseCode.ReqBodyError, msg="导入数据为空")
+        return self.resource.import_data(import_data)

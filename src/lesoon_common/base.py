@@ -19,7 +19,6 @@ from .extensions import toolbar
 from .resource import LesoonResource
 from .resource import LesoonResourceItem
 from .response import error_response
-from .response import ResponseCode
 from .utils.str import camelcase
 from .view import LesoonView
 from .wrappers import LesoonRequest
@@ -32,9 +31,7 @@ def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
         return error_response(code=error.code, msg=error.msg)
     else:
         current_app.logger.exception(error)
-        return error_response(
-            code=ResponseCode.Error, msg=f"{error.__class__} : {str(error)}"
-        )
+        return error_response(msg_detail=f"{error.__class__} : {str(error)}")
 
 
 class LesoonFlask(Flask):

@@ -3,18 +3,22 @@
 """
 import typing as t
 
+from flask import request
 from flask.views import MethodViewType
 from flask_restful import Resource
 from flask_sqlalchemy import Model
 from werkzeug.exceptions import BadRequestKeyError
 
+from .dataclass.resource import ImportData
+from .dataclass.resource import ImportParseResult
 from .exceptions import ResourceAttrError
 from .extensions import db
-from .globals import request
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
+from .response import error_response
 from .response import success_response
 from .utils.jwt import jwt_required
+from .utils.resource import parse_import_data
 from .wrappers import LesoonQuery
 
 
@@ -131,9 +135,14 @@ class BaseResource(Resource):
         return result
 
     @classmethod
-    def delete_in(cls, ids: t.List[str]):
+    def remove(cls, ids: t.List[str]):
         if not ids:
             return
+        cls.remove_many(ids)
+        db.session.commit()
+
+    @classmethod
+    def remove_many(cls, ids: t.List[str]):
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
 
 
@@ -208,13 +217,79 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     def delete(self):
         try:
-            if ids := request.args.get("ids"):
-                ids = ids.strip().split(",")
-            else:
-                ids = request.json
+            ids = request.args.get("ids") or request.json.get("ids")
+            ids = ids.strip().split(",")
         except AttributeError:
             raise BadRequestKeyError("缺少请求参数ids")
         if any(ids):
-            self.__class__.delete_in(ids)
-            db.session.commit()
+            self.__class__.remove(ids)
         return success_response()
+
+    @classmethod
+    def union_operate(cls, insert_rows: list, update_rows: list, delete_rows: list):
+        cls.resource.create_many(insert_rows)
+        cls.resource.update_many(update_rows)
+        cls.resource.delete_in(delete_rows)
+        db.session.commit()
+
+    @classmethod
+    def before_import_data(cls, import_data: ImportData):
+        """解析导入数据前置操作."""
+        pass
+
+    @classmethod
+    def before_import_insert_one(cls, obj: Model, import_data: ImportData):
+        """导入数据写库前操作."""
+        pass
+
+    @classmethod
+    def import_process(
+        cls, import_data: ImportData, import_parse_result: ImportParseResult
+    ):
+        _objs = list()
+        for obj in import_parse_result.obj_list:
+            cls.before_import_insert_one(obj, import_data)
+            if getattr(obj, "error", None):
+                import_parse_result.err_extract_list.append(obj.error)
+            else:
+                _objs.append(obj)
+
+        db.session.bulk_save_objects(_objs)
+        db.session.commit()
+
+    @classmethod
+    def import_data(cls, import_data: ImportData):
+        cls.before_import_data(import_data)
+
+        import_parse_result = parse_import_data(
+            import_data, cls.__model__, check_exist=True
+        )
+
+        if import_parse_result.err_output_list:
+            msg_detail = "数据异常<br/>" + "<br/>".join(import_parse_result.err_output_list)
+            return error_response(msg="导入异常,请根据错误信息检查数据", msg_detail=msg_detail)
+
+        if not import_parse_result.obj_list:
+            msg_detail = "<br/>".join(import_parse_result.err_extract_list)
+            return error_response(msg="未解析到数据", msg_detail=msg_detail)
+
+        cls.import_process(import_data, import_parse_result)
+
+        cls.after_import_data(import_data)
+
+        if import_parse_result.err_extract_list:
+            return error_response(
+                msg=f"导入结果: "
+                f"成功条数[{len(import_parse_result.obj_list)}] "
+                f"失败条数[{len(import_parse_result.err_extract_list)}]",
+                msg_detail=f"失败信息:{import_parse_result.err_extract_list}",
+            )
+        else:
+            return success_response(
+                msg=f"导入成功: 成功条数[{len(import_parse_result.obj_list)}]"
+            )
+
+    @classmethod
+    def after_import_data(cls, import_data: ImportData):
+        """导入数据后置操作."""
+        pass

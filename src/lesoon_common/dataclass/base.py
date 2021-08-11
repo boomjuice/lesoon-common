@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 import marshmallow as ma
-from marshmallow import EXCLUDE
 
-from .utils.str import camelcase
+from ..model import fields
+from ..model.schema import CamelSchema
 
 
 @dataclass(frozen=True)
@@ -56,29 +56,25 @@ class TokenUser:
         return TokenUserSchema().dump(self.__dict__, **kwargs)
 
 
-class TokenUserSchema(ma.Schema):
-    id = ma.fields.Int(required=True)
-    company_id = ma.fields.Int(required=True)
-    email = ma.fields.Str(allow_none=True)
-    phone_number = ma.fields.Str(allow_none=True)
-    org_id = ma.fields.Int()
-    login_name = ma.fields.Str(required=True)
-    icon = ma.fields.Str(allow_none=True)
-    user_name = ma.fields.Str()
-    user_id = ma.fields.Int()
-    employee_attr = ma.fields.Str()
-    if_deleted = ma.fields.Bool()
-    if_admin = ma.fields.Bool()
-    app_version = ma.fields.Str(allow_none=True)
-    app_type = ma.fields.Str(allow_none=True)
+class TokenUserSchema(CamelSchema):
+    id = fields.Int(required=True)
+    company_id = fields.Int(required=True)
+    email = fields.Str(allow_none=True)
+    phone_number = fields.Str(allow_none=True)
+    org_id = fields.Int()
+    login_name = fields.Str(required=True)
+    icon = fields.Str(allow_none=True)
+    user_name = fields.Str()
+    user_id = fields.Int()
+    employee_attr = fields.Str()
+    if_deleted = fields.Bool()
+    if_admin = fields.Bool()
+    app_version = fields.Str(allow_none=True)
+    app_type = fields.Str(allow_none=True)
 
-    # 将序列化/反序列化的列名调整成驼峰命名
-    def on_bind_field(self, field_name: str, field_obj: ma.fields.Field) -> None:
-        field_obj.data_key = camelcase(field_obj.data_key or field_name)
-
-    @ma.post_load()
+    @ma.post_load
     def make_user(self, data, **kwargs):
         return TokenUser(**data)
 
     class Meta:
-        unknown: str = EXCLUDE
+        unknown: str = ma.EXCLUDE

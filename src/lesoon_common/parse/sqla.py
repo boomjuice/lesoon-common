@@ -46,13 +46,14 @@ def parse_filter(where: dict, model: t.Type[Model]) -> SqlaExpList:
 
     conditions = []
 
-    for column, value in where.items():
-        column = parse_prefix_alias(column, model)
+    for key, value in list(where.items()):
+        column = parse_prefix_alias(key, model)
         if not column:
             continue
-        new_filter = parse_suffix_operation(column, value, model)
-
-        conditions.append(new_filter)
+        condition = parse_suffix_operation(column, value, model)
+        if isinstance(condition, SqlaExp):
+            conditions.append(condition)
+            del where[key]
 
     return conditions
 
@@ -71,7 +72,7 @@ def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
         col = parse_prefix_alias(col, model)
         if not col:
             continue
-        attr = _parse_attribute_name(col, model)
+        attr = parse_attribute_name(col, model)
         if order == -1:
             attr = attr.desc()
         conditions.append(attr)
@@ -189,29 +190,28 @@ def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
 
 def parse_suffix_operation(
     column: str, value: t.Union[int, str, t.List[t.Any]], model: t.Type[Model]
-) -> SqlaExp:
+) -> t.Optional[SqlaExp]:
     if m := re.match(r"(?P<col>[\w\\.]+)_(?P<op>[\w]+)", column):
         col, op = m.group("col"), m.group("op")
-        attr = _parse_attribute_name(col, model)
-        return OpParserFactory.create(attr, op, value).parse()
+        attr = parse_attribute_name(col, model)
     else:
-        attr = _parse_attribute_name(column, model)
-        if isinstance(value, list):
-            return attr.in_(value)
-        else:
-            return sqla_op.eq(attr, value)
+        attr = parse_attribute_name(column, model)
+        op = "in" if isinstance(value, list) else "eq"
+    if not attr:
+        return None
+    return OpParserFactory.create(attr, op, value).parse()
 
 
-def _parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttribute:
+def parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttribute:
     """根据 model,name获取模型的字段对象.
     :param model: sqlalchemy.Model
     :param name: 字段名
     :return: 返回字段名对应的Column实例对象
     """
     if isinstance(model, Annotated):
-        attr = getattr(model.columns, udlcase(name))
+        attr = getattr(model.columns, udlcase(name), None)
     else:
-        attr = getattr(model, udlcase(name))
+        attr = getattr(model, udlcase(name), None)
     return attr
 
 

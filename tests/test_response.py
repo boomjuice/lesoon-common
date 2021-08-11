@@ -43,5 +43,5 @@ class TestResponseUtils:
         assert r["total"] == 123
 
     def test_error_response_null(self):
-        r = Response.load(error_response(None))
+        r = Response.load(error_response())
         assert r.code == str(ResponseCode.Error.code)

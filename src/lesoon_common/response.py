@@ -6,15 +6,15 @@ import typing as t
 @enum.unique
 class ResponseCode(enum.Enum):
     Success = ("0", "success", "")
-    Error = ("5001", "error", "系统异常")
+    Error = ("5001", "unkown error", "系统异常")
 
     RemoteCallError = ("3001", "远程调用异常", "请检查应用或传参是否异常")
 
     ReqParamMiss = ("4001", "请求参数缺失", "请检查传参是否完整")
-    ReqDataMiss = ("4002", "请求体数据缺失", "请检查请求体传参是否完整")
+    ReqBodyMiss = ("4002", "请求体数据缺失", "请检查请求体传参是否完整")
     ReqFormMiss = ("4003", "Form表单数据缺失", "请检查Form表单传参是否完整")
     ReqParamError = ("4004", "请求参数异常", "请检查传参是否正确")
-    ReqDataError = ("4005", "请求体数据异常", "请检查请求体传参是否正确")
+    ReqBodyError = ("4005", "请求体数据异常", "请检查请求体传参是否正确")
     ReqFormError = ("4006", "Form表单数据异常", "请检查Form表单数据是否正确")
 
     ValidOpError = ("4007", "违法操作", "当前操作不合法")
@@ -73,6 +73,14 @@ class Response:
     def solution(self, value):
         self.flag["solution"] = value
 
+    @property
+    def msg_detail(self):
+        return self.flag["retDetail"]
+
+    @msg_detail.setter
+    def msg_detail(self, value):
+        self.flag["retDetail"] = value
+
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items() if v}
 
@@ -89,7 +97,5 @@ def success_response(result: t.Any = None, **kwargs) -> dict:
     return resp.to_dict()
 
 
-def error_response(code: ResponseCode, **kwargs) -> dict:
-    if not code:
-        code = ResponseCode.Error
+def error_response(code: ResponseCode = ResponseCode.Error, **kwargs) -> dict:
     return Response(code=code, solution=code.solution, **kwargs).to_dict()

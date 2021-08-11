@@ -10,24 +10,24 @@ from ..utils.str import camelcase
 
 class Param:
     param_miss_code = {
-        "args": ResponseCode.ReqParamMiss,
-        "json": ResponseCode.ReqDataMiss,
+        "param": ResponseCode.ReqParamMiss,
+        "body": ResponseCode.ReqBodyMiss,
         "form": ResponseCode.ReqFormMiss,
     }
 
     param_error_code = {
-        "args": ResponseCode.ReqParamError,
-        "json": ResponseCode.ReqDataError,
+        "param": ResponseCode.ReqParamError,
+        "body": ResponseCode.ReqBodyError,
         "form": ResponseCode.ReqFormError,
     }
 
-    allow_location = ("args", "json", "form")
+    allow_location = {"param": "args", "body": "json", "form": "form"}
 
     def __init__(
         self,
-        key: str,
+        key: t.Optional[str] = None,
         default: t.Any = inspect.Parameter.empty,
-        loc: str = "args",
+        loc: str = "param",
         type: t.Any = str,
         deserialize: t.Any = None,
         msg: str = "",
@@ -38,9 +38,9 @@ class Param:
 
         self.deserialize = deserialize or type
 
-        if loc not in self.allow_location:
-            raise ValueError(f"{loc}是{self.allow_location}中的值")
-        self.loc = loc
+        if loc not in self.allow_location.keys():
+            raise ValueError(f"{loc}不是{self.allow_location.keys()}中的值")
+        self.loc = self.allow_location[loc]
 
         self.msg = msg or f"传参异常:{key}"
 
@@ -48,27 +48,28 @@ class Param:
         self.error_code = self.param_error_code[loc]
 
 
-def _get_request_params(param_dict: t.Dict[str, Param]) -> dict:
-    request_params = dict()
-    for arg_name, param in param_dict.items():
-        prop = getattr(request, param.loc)
-        value = prop.get(param.key)
-        if value is None:
-            if param.default is inspect.Parameter.empty:
-                raise RequestError(code=param.miss_code, msg=param.msg)
-            else:
-                value = param.default
-        else:
-            try:
-                value = param.deserialize(value)
-            except ValueError:
-                raise RequestError(
-                    code=param.error_code,
-                    msg=f"{param.key}类型转换异常 {param.deserialize}:{value}",
-                )
+def _get_request_param(param: Param) -> t.Any:
+    prop = getattr(request, param.loc)
+    if not prop:
+        return param.default
 
-        request_params[arg_name] = value
-    return request_params
+    if not param.key:
+        return prop
+
+    value = prop.get(param.key)
+    if value is None:
+        if param.default is inspect.Parameter.empty:
+            raise RequestError(code=param.miss_code, msg=param.msg)
+        else:
+            return param.default
+    else:
+        try:
+            return param.deserialize(value)
+        except ValueError:
+            raise RequestError(
+                code=param.error_code,
+                msg=f"{param.key}类型转换异常 {param.deserialize}:{value}",
+            )
 
 
 def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
@@ -127,19 +128,24 @@ def request_param(
         raise RuntimeError("param_dict 和 extend_param_dict 只可以定义一个")
 
     def wrapper(fn):
-        _param_dict = dict()
         if param_dict:
             _param_dict = param_dict
         else:
             _param_dict = _parse_func_signature(fn)
             if extend_param_dict:
                 _param_dict.update(**extend_param_dict)
+        fn._param_dict = _param_dict  # type:ignore[attr-defined]
 
         @wraps(fn)
         def decorator(*args, **kwargs):
-            _request_param = _get_request_params(_param_dict)
-            kwargs.update(_request_param)
-            return fn(*args, **kwargs)
+            if kwargs:
+                # 直接调用情况不做参数注入
+                return fn(*args, **kwargs)
+            else:
+                # 请求调用情况做参数注入
+                for arg_name, param in fn._param_dict.items():
+                    kwargs[arg_name] = _get_request_param(param)
+                return fn(*args, **kwargs)
 
         return decorator
 
