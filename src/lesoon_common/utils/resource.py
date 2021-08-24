@@ -18,6 +18,13 @@ log = logging.getLogger(__name__)
 def parse_import_data(
     import_data: ImportData, model: Model, check_exist: bool = False
 ) -> ImportParseResult:
+    """
+    解析导入数据,将其转换为对应的模型, 并记录转换过程中的异常
+    :param import_data:  导入数据类
+    :param model: 数据导入的表对应的模型
+    :param check_exist: 是否进行数据库层面约束检查
+    :return:
+    """
     # 初始化数据
     union_key_set = {udlcase(mk) for mk in import_data.union_key}
     union_key_value_set = set()
@@ -102,6 +109,7 @@ def parse_import_data(
                     union_key_value_set.add(union_key_value)
 
                 if check_exist and model.query.filter(*union_filter).count():
+                    # 数据库中是否已存在当前数据
                     msg_detail = (
                         f"Excel [{rid + import_data.import_start_index}行,] "
                         f"根据约束[{import_data.union_key_name}]数据已存在"

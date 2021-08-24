@@ -5,7 +5,7 @@ from .response import ResponseCode
 
 
 class ParseError(Exception):
-    """请求参数解析异常类"""
+    """请求参数解析异常"""
 
     pass
 
@@ -16,16 +16,26 @@ class ResourceAttrError(Exception):
     pass
 
 
+class ConfigError(Exception):
+    """配置异常"""
+
+    pass
+
+
 class ServiceError(Exception):
     """服务异常"""
 
-    def __init__(self, code: ResponseCode, msg: t.Optional[str] = None):
+    CODE = ResponseCode.Error
+
+    def __init__(
+        self, code: t.Optional[ResponseCode] = None, msg: t.Optional[str] = None
+    ):
         super().__init__()
-        self.code = code
-        self.msg = msg or code.msg
+        self.code = code or self.__class__.CODE
+        self.msg = msg or self.code.msg
 
 
 class RequestError(ServiceError):
     """请求异常"""
 
-    pass
+    CODE = ResponseCode.ReqError

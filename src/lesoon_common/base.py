@@ -2,12 +2,10 @@
 import logging
 import sys
 import typing as t
-from datetime import timedelta
 
 from flask import current_app
 from flask import Flask
 from flask_restful import Api
-from werkzeug.datastructures import ImmutableDict
 from werkzeug.exceptions import HTTPException
 
 from .exceptions import ServiceError
@@ -43,54 +41,17 @@ class LesoonFlask(Flask):
         "toolbar": toolbar,
     }
 
-    #: 重写Flask.default_config以减少未配置config的异常
-    default_config = ImmutableDict(
-        {
-            "ENV": None,
-            "DEBUG": None,
-            "TESTING": False,
-            "PROPAGATE_EXCEPTIONS": None,
-            "PRESERVE_CONTEXT_ON_EXCEPTION": None,
-            "SECRET_KEY": "SECRET_KEY",
-            "PERMANENT_SESSION_LIFETIME": timedelta(days=31),
-            "USE_X_SENDFILE": False,
-            "SERVER_NAME": None,
-            "APPLICATION_ROOT": "/",
-            "SESSION_COOKIE_NAME": "session",
-            "SESSION_COOKIE_DOMAIN": None,
-            "SESSION_COOKIE_PATH": None,
-            "SESSION_COOKIE_HTTPONLY": True,
-            "SESSION_COOKIE_SECURE": False,
-            "SESSION_COOKIE_SAMESITE": None,
-            "SESSION_REFRESH_EACH_REQUEST": True,
-            "MAX_CONTENT_LENGTH": None,
-            "SEND_FILE_MAX_AGE_DEFAULT": None,
-            "TRAP_BAD_REQUEST_ERRORS": None,
-            "TRAP_HTTP_EXCEPTIONS": False,
-            "EXPLAIN_TEMPLATE_LOADING": False,
-            "PREFERRED_URL_SCHEME": "http",
-            "JSON_AS_ASCII": True,
-            "JSON_SORT_KEYS": True,
-            "JSONIFY_PRETTYPRINT_REGULAR": False,
-            "JSONIFY_MIMETYPE": "application/json",
-            "TEMPLATES_AUTO_RELOAD": None,
-            "MAX_COOKIE_SIZE": 4093,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-            "CACHE_TYPE": "flask_caching.backends.simple",
-        }
-    )
-
     request_class = LesoonRequest
 
     def __init__(
         self,
         import_name=__package__,
+        config: object = None,
         extra_extensions: t.Optional[t.Dict[str, t.Any]] = None,
         **kwargs,
     ):
         super().__init__(import_name, **kwargs)
-
+        self.config.from_object(config)
         self.registered_extensions = self.default_extensions
         if extra_extensions:
             self.registered_extensions.update(**extra_extensions)

@@ -10,7 +10,7 @@ class TestStrUtil:
 
     def test_generate_id_standard(self):
         r_id = generate_id(20)
-        assert type(r_id) == int
+        assert type(r_id) == str
         assert len(str(r_id)) == 20
 
     def test_generate_id_bulk(self):

@@ -5,7 +5,6 @@ from functools import wraps
 
 from flask import Blueprint
 from flask import Flask
-from flask import request
 from flask.wrappers import ResponseBase
 from flask_restful import unpack
 
@@ -22,8 +21,8 @@ from .utils.str import udlcase
 
 
 def route(rule: str, skip_decorator: bool = False, **options: t.Any) -> t.Callable:
-    """一个用于标示路由的装饰器,使用在BaseView的子类中，
-    与 `@app.route`使用类相同
+    """一个用于标示路由的装饰器,使用在BaseView的实例方法中，
+    与 `@app.route`使用相同
     """
 
     def decorator(f: t.Callable) -> t.Callable:
@@ -35,6 +34,7 @@ def route(rule: str, skip_decorator: bool = False, **options: t.Any) -> t.Callab
 
 
 def get_route_members(base_cls, cls):
+    """获取被@route装饰的实例方法."""
     base_members = dir(base_cls)
     all_members = inspect.getmembers(cls, predicate=inspect.isfunction)
     return [
@@ -62,6 +62,17 @@ class BaseView:
         base_cls=None,
         **rule_options
     ):
+        """
+        app = Flask()
+        class UserView(BaseView):
+
+            @route("/test",methods=["GET"])
+            def test():
+                return "test"
+
+        UserView.register(app, "/sysUser", endpoint = "sys_user")
+        在注册之后可以通过 GET http:://yourhost/sysUser/test 访问.
+        """
 
         url = url or cls.url
         base_cls = base_cls or BaseView
@@ -86,6 +97,8 @@ class BaseView:
 
     @classmethod
     def make_view_func(cls, name: str, skip_decorator: bool):
+        from flask import request
+
         instance = cls()
 
         view = getattr(instance, name)
@@ -137,9 +150,9 @@ class LesoonView(BaseView):
     @route("/save", methods=["POST"])
     @request_param(
         {
-            "insert_rows": Param(key="insertRows", loc="body", type=list),
-            "update_rows": Param(key="updateRows", loc="body", type=list),
-            "delete_rows": Param(key="deleteRows", loc="body", type=list),
+            "insert_rows": Param(key="insertRows", loc="body", data_type=list),
+            "update_rows": Param(key="updateRows", loc="body", data_type=list),
+            "delete_rows": Param(key="deleteRows", loc="body", data_type=list),
         }
     )
     def union_operate(self, insert_rows: list, update_rows: list, delete_rows: list):

@@ -9,9 +9,12 @@ import typing as t
 from flask_sqlalchemy import Model
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.orm.query import Query
-from sqlalchemy.orm.util import AliasedClass
+from sqlalchemy.orm.util import _ORMJoin
 from sqlalchemy.sql import expression as SqlaExp
 from sqlalchemy.sql.annotation import Annotated
+from sqlalchemy.sql.schema import Column
+from sqlalchemy.sql.schema import Table
+from sqlalchemy.sql.selectable import Alias
 
 from ..exceptions import ParseError
 from ..utils.str import udlcase
@@ -21,7 +24,7 @@ SqlaExpList = t.List[SqlaExp]
 
 
 def parse_multi_condition(
-    where: dict, sort_list: list, models: t.Set[t.Type[Model]]
+    where: dict, sort_list: list, models: t.List[t.Union[Table, Alias]]
 ) -> t.Tuple[SqlaExpList, SqlaExpList]:
     """多表过滤条件解析."""
     filter_list = list()
@@ -73,9 +76,10 @@ def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
         if not col:
             continue
         attr = parse_attribute_name(col, model)
-        if order == -1:
-            attr = attr.desc()
-        conditions.append(attr)
+        if isinstance(attr, (Column, InstrumentedAttribute)):
+            if order == -1:
+                attr = attr.desc()
+            conditions.append(attr)
     return conditions
 
 
@@ -95,7 +99,7 @@ class SqlaOpParser(metaclass=abc.ABCMeta):
         pass
 
 
-class CmprParser(SqlaOpParser):
+class CmprOpParser(SqlaOpParser):
     comparison_mapper = {
         "eq": sqla_op.eq,
         "ne": sqla_op.ne,
@@ -110,7 +114,7 @@ class CmprParser(SqlaOpParser):
         return cmpr_op(self.column, self.value)
 
 
-class InParser(SqlaOpParser):
+class InOpParser(SqlaOpParser):
     in_mapper = {"in": "in_", "notIn": "notin_"}
 
     def parse(self):
@@ -126,7 +130,7 @@ class InParser(SqlaOpParser):
             raise ParseError(f"{attr_op} 不支持的类型{self.value}:{type(self.value)}")
 
 
-class LikeParser(SqlaOpParser):
+class LikeOpParser(SqlaOpParser):
     like_mapper = {
         "like": "like",
         "ilike": "ilike",
@@ -148,14 +152,14 @@ class OpParserFactory:
         operate: str,
         value: t.Union[int, str, t.List[t.Any]],
     ) -> SqlaOpParser:
-        if operate in CmprParser.comparison_mapper:
-            return CmprParser(column, operate, value)
+        if operate in CmprOpParser.comparison_mapper:
+            return CmprOpParser(column, operate, value)
 
         elif operate.lower().count("like"):
-            return LikeParser(column, operate, value)
+            return LikeOpParser(column, operate, value)
 
         elif operate.lower().count("in"):
-            return InParser(column, operate, value)
+            return InOpParser(column, operate, value)
         else:
             # 未定义的查询操作
             raise ParseError(f"无法解析的查询参数 {column}:{value}")
@@ -170,9 +174,7 @@ def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
     if len(name_split) > 2:
         raise ParseError(f"过滤列名不合法: {name}")
     elif len(name_split) == 2:
-        if isinstance(model, AliasedClass):
-            model_alias = model._aliased_insp.name
-        elif isinstance(model, Annotated):
+        if isinstance(model, (Alias, Annotated)):
             model_alias = model.name
         else:
             model_alias = None
@@ -197,34 +199,44 @@ def parse_suffix_operation(
     else:
         attr = parse_attribute_name(column, model)
         op = "in" if isinstance(value, list) else "eq"
-    if not attr:
+    if not isinstance(attr, (Column, InstrumentedAttribute)):
         return None
     return OpParserFactory.create(attr, op, value).parse()
 
 
-def parse_attribute_name(name: str, model: t.Type[Model]) -> InstrumentedAttribute:
+def parse_attribute_name(
+    name: str, model: t.Type[Model]
+) -> t.Union[Column, InstrumentedAttribute]:
     """根据 model,name获取模型的字段对象.
     :param model: sqlalchemy.Model
     :param name: 字段名
     :return: 返回字段名对应的Column实例对象
     """
-    if isinstance(model, Annotated):
+    if isinstance(model, (Alias, Table, Annotated)):
         attr = getattr(model.columns, udlcase(name), None)
     else:
         attr = getattr(model, udlcase(name), None)
     return attr
 
 
-def parse_related_models(query: Query) -> t.Set[Model]:
+def parse_related_models(query: Query) -> t.List[t.Union[Table, Alias]]:
     """获取Query对象查询涉及的所有表"""
-    related_models = set()
-    # 根据查询列查找涉及表实体
-    for column in query.column_descriptions:
-        related_models.add(column["entity"])
+    related_models: t.List[t.Union[Table, Alias]] = list()
 
-    # 根据关联查找关联表实体
-    for join in query._legacy_setup_joins:
-        join_obj = join[0].entity_namespace
-        if isinstance(join_obj, t.Hashable):
-            related_models.add(join_obj)
+    # 递归查找涉及表实体
+    # 注意: 未包含子查询以及with语句涉及的表情况
+    def recur_realted_models(
+        _froms: t.List[t.Any], related_models: t.List[t.Union[Table, Alias]]
+    ):
+        for _from in _froms:
+            if isinstance(_from, (Table, Alias)):
+                # 表实体
+                related_models.append(_from)
+            elif isinstance(_from, _ORMJoin):
+                # join实体
+                recur_realted_models([_from.left, _from.right], related_models)
+            else:
+                raise TypeError(f"type:{_from} = {type(_from)}")
+
+    recur_realted_models(_froms=query.statement.froms, related_models=related_models)
     return related_models

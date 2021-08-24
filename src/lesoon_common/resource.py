@@ -42,11 +42,13 @@ class BaseResource(Resource):
 
     @classmethod
     def select_filter(cls) -> LesoonQuery:
+        """通用查询query."""
         query = cls.__model__.query  # type:ignore[attr-defined]
         return query.with_request_condition()
 
     @classmethod
     def page_get(cls) -> t.Tuple[t.Any, int]:
+        """通用分页查询."""
         query: LesoonQuery = cls.select_filter()
         page_query = query.paginate()
 
@@ -136,6 +138,7 @@ class BaseResource(Resource):
 
     @classmethod
     def remove(cls, ids: t.List[str]):
+        """删除资源入口."""
         if not ids:
             return
         cls.remove_many(ids)
@@ -147,6 +150,8 @@ class BaseResource(Resource):
 
 
 class LesoonResourceType(MethodViewType):
+    """Resource类定义检测元类."""
+
     def __init__(cls, name, bases, d):  # noqa
         super().__init__(name, bases, d)
         if name != "LesoonResource":
@@ -227,6 +232,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     @classmethod
     def union_operate(cls, insert_rows: list, update_rows: list, delete_rows: list):
+        """新增，更新，删除的联合操作."""
         cls.resource.create_many(insert_rows)
         cls.resource.update_many(update_rows)
         cls.resource.delete_in(delete_rows)
@@ -246,6 +252,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     def import_process(
         cls, import_data: ImportData, import_parse_result: ImportParseResult
     ):
+        """导入操作写库逻辑."""
         _objs = list()
         for obj in import_parse_result.obj_list:
             cls.before_import_insert_one(obj, import_data)
@@ -255,10 +262,12 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
                 _objs.append(obj)
 
         db.session.bulk_save_objects(_objs)
+        import_parse_result.obj_list = _objs
         db.session.commit()
 
     @classmethod
     def import_data(cls, import_data: ImportData):
+        """数据导入入口."""
         cls.before_import_data(import_data)
 
         import_parse_result = parse_import_data(

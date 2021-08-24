@@ -10,6 +10,7 @@ class ResponseCode(enum.Enum):
 
     RemoteCallError = ("3001", "远程调用异常", "请检查应用或传参是否异常")
 
+    ReqError = ("4000", "请求异常", "请检查请求是否合法")
     ReqParamMiss = ("4001", "请求参数缺失", "请检查传参是否完整")
     ReqBodyMiss = ("4002", "请求体数据缺失", "请检查请求体传参是否完整")
     ReqFormMiss = ("4003", "Form表单数据缺失", "请检查Form表单传参是否完整")

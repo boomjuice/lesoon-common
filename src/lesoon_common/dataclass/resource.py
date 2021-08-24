@@ -10,6 +10,8 @@ from ..model.schema import CamelSchema
 
 @dataclass
 class ImportData:
+    """导入数据类."""
+
     # 列名列表  [a,b,c]
     col_names: t.List[str]
     # 是否必填  [true,false,true]
@@ -62,6 +64,7 @@ class ImportDataSchema(CamelSchema):
 
     @ma.pre_load
     def pre_process(self, data, **kwargs):
+        """预处理导入数据,检查数据合法性."""
         data["colNames"] = data["colNames"].strip("").split(",")
         data["mustArray"] = data["mustArray"].strip("").split(",")
         data["unionKey"] = data["unionKey"].strip("").split(",")
@@ -78,6 +81,8 @@ class ImportDataSchema(CamelSchema):
 
 @dataclass
 class ImportParseResult:
+    """导入数据解析类."""
+
     obj_list: t.List[Model]
     err_output_list: t.List[str]
     err_extract_list: t.List[str]

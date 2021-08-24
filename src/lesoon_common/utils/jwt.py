@@ -10,6 +10,7 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.internal_utils import custom_verification_for_token
 from flask_jwt_extended.internal_utils import verify_token_not_blocklisted
 from flask_jwt_extended.internal_utils import verify_token_type
+from flask_jwt_extended.utils import create_access_token
 from flask_jwt_extended.utils import decode_token
 from flask_jwt_extended.utils import get_unverified_jwt_headers
 from flask_jwt_extended.view_decorators import _decode_jwt_from_cookies
@@ -29,6 +30,32 @@ def get_token():
             "before using this method"
         )
     return token
+
+
+def get_current_user():
+    """获取token中存储的当前用户.
+    注意: 为了保持model写库一致性，未带token的默认返回系统用户 TokenUser.system_default()
+    """
+    from ..dataclass.base import TokenUser
+
+    jwt_user_dict = getattr(_request_ctx_stack.top, "jwt_user", None)
+    if jwt_user_dict is None:
+        return TokenUser.system_default()
+    else:
+        return jwt_user_dict["loaded_user"]
+
+
+def create_system_token():
+    """生成系统间调用token.
+    注意: 该token具有管理员权限
+    """
+    from ..dataclass.base import TokenUser
+
+    user: TokenUser = TokenUser.system_default()
+
+    return create_access_token(
+        identity=str(user.id), additional_claims={"userInfo": user.to_dict()}
+    )
 
 
 def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):

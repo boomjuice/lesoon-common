@@ -72,7 +72,10 @@ class LesoonRequest(Request):
 
     @cached_property
     def token(self) -> str:
-        return get_token()
+        try:
+            return get_token()
+        except RuntimeError:
+            return ""
 
 
 class LesoonQuery(BaseQuery):
@@ -134,8 +137,8 @@ class LesoonJwt(JWTManager):
 
             return TokenUser.load(jwt_data["userInfo"])
 
-        def invalid_token_callback(jwt_headers, jwt_data):
-            return error_response(code=ResponseCode.TokenInValid)
+        def invalid_token_callback(msg):
+            return error_response(code=ResponseCode.TokenInValid, msg=msg)
 
         def expired_token_callback(jwt_headers, jwt_data):
             return error_response(code=ResponseCode.TokenExpired)
@@ -187,7 +190,7 @@ class LesoonJwt(JWTManager):
         app.config.setdefault("JWT_SECRET_KEY", None)
         app.config.setdefault("JWT_SESSION_COOKIE", True)
         app.config.setdefault("JWT_TOKEN_LOCATION", ("headers", "query_string"))
-        app.config.setdefault("JWT_ENCODE_NBF", True)
+        app.config.setdefault("JWT_ENCODE_NBF", False)
 
     def _encode_jwt_from_config(
         self,

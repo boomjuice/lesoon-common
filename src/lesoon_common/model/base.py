@@ -75,6 +75,9 @@ class FixedOperatorMixin:
 class BaseModel(IdModel, FixedOperatorMixin):
     __abstract__ = True
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 class BaseCompanyModel(BaseModel, CompanyMixin):
     __abstract__ = True

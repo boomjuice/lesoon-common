@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy.orm.util import aliased
+from sqlalchemy.sql.expression import alias
 from tests.models import User
 from tests.models import UserExt
 
@@ -95,18 +95,18 @@ class TestSQLParser:
         assert len(r) == 0
 
     def test_parse_alias_match(self):
-        a = aliased(User, name="a")
+        a = alias(User, name="a")
         r = parse_prefix_alias("a.id", a)
         assert r == "id"
 
     def test_parse_alias_not_match(self):
-        a = aliased(User, name="a")
+        a = alias(User, name="a")
         r = parse_prefix_alias("b.id", a)
         assert r is None
 
     def test_parse_alias_invalid_col(self):
         with pytest.raises(ParseError):
-            a = aliased(User, name="a")
+            a = alias(User, name="a")
             parse_prefix_alias("a.b.c", a)
 
     def test_parse_sort_null(self):
@@ -124,11 +124,10 @@ class TestSQLParser:
         query = User.query
         r = parse_related_models(query=query)
         assert len(r) == 1
-        assert r.pop() == User
+        assert r.pop() == User.__table__
 
     def test_parse_related_models_join(self):
         query = User.query.join(UserExt, User.id == UserExt.user_id)
         r = parse_related_models(query=query)
         assert len(r) == 2
-        assert User in r
-        assert UserExt in r
+        assert r == [User.__table__, UserExt.__table__]
