@@ -233,9 +233,9 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     @classmethod
     def union_operate(cls, insert_rows: list, update_rows: list, delete_rows: list):
         """新增，更新，删除的联合操作."""
-        cls.resource.create_many(insert_rows)
-        cls.resource.update_many(update_rows)
-        cls.resource.delete_in(delete_rows)
+        cls.create_many(insert_rows)
+        cls.update_many(update_rows)
+        cls.remove_many(delete_rows)
         db.session.commit()
 
     @classmethod

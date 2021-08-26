@@ -63,7 +63,7 @@ class TokenUser:
             "loginName": "000000",
             "userName": "系统自动生成",
             "userId": -1,
-            "if_admin": True,
+            "ifAdmin": True,
         }
         return cls.load(system_user)
 

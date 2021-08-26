@@ -1,10 +1,10 @@
 from functools import partial
 
 from flask.globals import _lookup_req_object
+from flask_jwt_extended import get_current_user
 from werkzeug.local import LocalProxy
 
 from .dataclass.base import TokenUser
-from .utils.jwt import get_current_user
 from .utils.jwt import get_token
 from .wrappers import LesoonRequest
 

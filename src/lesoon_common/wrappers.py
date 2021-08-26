@@ -31,9 +31,6 @@ class LesoonRequest(Request):
     @cached_property
     def where(self) -> t.Dict[str, t.Any]:
         where = extract_where_arg(self.args.get("where"))
-        if not where and isinstance(request.json, dict):
-            # where条件对于query_string过长的情况
-            where = request.json.get("where", where)
         return where
 
     @cached_property

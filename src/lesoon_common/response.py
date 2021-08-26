@@ -27,10 +27,30 @@ class ResponseCode(enum.Enum):
     LoginError = ("4021", "登录异常", "请检查用户名或密码是否正常")
     NotFoundError = ("4041", "查询异常", "当前查询参数没有对应结果")
 
-    def __init__(self, code: int, msg: str, solution: str):
+    @classmethod
+    def is_exist(cls, code: str):
+        return code in cls._value2member_map_  # type:ignore[operator]
+
+    def __new__(cls, *values):
+        obj = object.__new__(cls)
+        # first value is canonical value
+        obj._value_ = values[0]
+        for other_value in values[1:]:
+            cls._value2member_map_[other_value] = obj
+        obj._all_values = values
+        return obj
+
+    def __init__(self, code: str, msg: str, solution: str):
         self.code = code
         self.msg = msg
         self.solution = solution
+
+    def __repr__(self):
+        return "<{}.{}: {}>".format(
+            self.__class__.__name__,
+            self._name_,
+            ", ".join([repr(v) for v in self._all_values]),
+        )
 
 
 class Response:
@@ -82,6 +102,10 @@ class Response:
     def msg_detail(self, value):
         self.flag["retDetail"] = value
 
+    @property
+    def result(self):
+        return self.data or self.rows or None
+
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items() if v}
 
@@ -98,5 +122,13 @@ def success_response(result: t.Any = None, **kwargs) -> dict:
     return resp.to_dict()
 
 
-def error_response(code: ResponseCode = ResponseCode.Error, **kwargs) -> dict:
+def error_response(
+    code: t.Union[ResponseCode, str] = ResponseCode.Error, **kwargs
+) -> dict:
+    if isinstance(code, str):
+        if ResponseCode.is_exist(code):
+            code = ResponseCode(code)  # type:ignore[call-arg]
+        else:
+            code = ResponseCode.Error
+            code.msg = kwargs.pop("msg", None) or code.msg
     return Response(code=code, solution=code.solution, **kwargs).to_dict()

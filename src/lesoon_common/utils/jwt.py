@@ -1,6 +1,11 @@
 """ jwt工具类.
 重写flask_jwt_extended部分模块以支持定制化操作
 """
+import os
+import uuid
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from functools import wraps
 
 from flask import _request_ctx_stack
@@ -10,7 +15,6 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.internal_utils import custom_verification_for_token
 from flask_jwt_extended.internal_utils import verify_token_not_blocklisted
 from flask_jwt_extended.internal_utils import verify_token_type
-from flask_jwt_extended.utils import create_access_token
 from flask_jwt_extended.utils import decode_token
 from flask_jwt_extended.utils import get_unverified_jwt_headers
 from flask_jwt_extended.view_decorators import _decode_jwt_from_cookies
@@ -20,6 +24,8 @@ from flask_jwt_extended.view_decorators import _decode_jwt_from_query_string
 from flask_jwt_extended.view_decorators import _load_user
 from flask_jwt_extended.view_decorators import _verify_token_is_fresh
 from jose import jwe
+from jose import jwt
+from werkzeug.utils import import_string
 
 
 def get_token():
@@ -32,30 +38,33 @@ def get_token():
     return token
 
 
-def get_current_user():
-    """获取token中存储的当前用户.
-    注意: 为了保持model写库一致性，未带token的默认返回系统用户 TokenUser.system_default()
-    """
-    from ..dataclass.base import TokenUser
-
-    jwt_user_dict = getattr(_request_ctx_stack.top, "jwt_user", None)
-    if jwt_user_dict is None:
-        return TokenUser.system_default()
-    else:
-        return jwt_user_dict["loaded_user"]
-
-
 def create_system_token():
     """生成系统间调用token.
     注意: 该token具有管理员权限
     """
     from ..dataclass.base import TokenUser
 
+    env = os.environ.get("APP_CONFIG", "default")
+    config = import_string("config.config")[env]
+
+    secret_key = config.JWT_SECRET_KEY
+    expires_delta = config.JWT_ACCESS_TOKEN_EXPIRES
+
     user: TokenUser = TokenUser.system_default()
 
-    return create_access_token(
-        identity=str(user.id), additional_claims={"userInfo": user.to_dict()}
-    )
+    now = datetime.now(timezone.utc)
+
+    token_data = {
+        "iat": now,
+        "exp": now + timedelta(seconds=expires_delta),
+        "jti": str(uuid.uuid4()),
+        "userInfo": user.to_dict(),
+        "type": "access",
+        "sub": str(user.id),
+    }
+    return jwe.encrypt(
+        jwt.encode(token_data, secret_key), key=secret_key, cty="JWT"
+    ).decode()
 
 
 def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):

@@ -8,15 +8,15 @@ class TestReqParser:
         assert extract_sort_arg(sort) == [("created_at", 1), ("name", -1)]
 
     def test_extract_sort_arg_list(self):
-        sort = '[("created_at",1), ("name", -1)]'
-        assert extract_sort_arg(sort) == [("created_at", 1), ("name", -1)]
+        sort = '[["created_at",1], ["name", -1]]'
+        assert extract_sort_arg(sort) == [["created_at", 1], ["name", -1]]
 
     def test_extract_sort_arg_null(self):
         sort = ""
         assert extract_sort_arg(sort) == []
 
     def test_extract_where_arg_dictionary(self):
-        where = "{'id':1}"
+        where = '{"id":1}'
         assert extract_where_arg(where) == {"id": 1}
 
     def test_extract_where_arg_null(self):

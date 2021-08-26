@@ -27,6 +27,8 @@ def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
         return error
     elif isinstance(error, ServiceError):
         return error_response(code=error.code, msg=error.msg)
+    elif hasattr(error, "code"):
+        return error_response(code=error.code, msg=error.msg)  # type:ignore
     else:
         current_app.logger.exception(error)
         return error_response(msg_detail=f"{error.__class__} : {str(error)}")

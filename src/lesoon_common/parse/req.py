@@ -1,5 +1,5 @@
 """ 请求参数过滤模块. """
-import ast
+import json
 import re
 import typing as t
 
@@ -9,8 +9,12 @@ from ..exceptions import ParseError
 def extract_where_arg(where) -> t.Dict[str, str]:
     if where:
         try:
-            return ast.literal_eval(where)
-        except ValueError:
+            _where = json.loads(where)
+            if not isinstance(_where, dict):
+                return dict()
+            else:
+                return _where
+        except json.JSONDecodeError:
             raise ParseError(f"请求参数无法序列化 where:{where}")
     else:
         return dict()
@@ -29,6 +33,6 @@ def extract_sort_arg(sort) -> t.List[t.Tuple[str, int]]:
                     arg.append((s, 1))
             return arg
         else:
-            return ast.literal_eval(sort)
+            return json.loads(sort)
     else:
         return list()

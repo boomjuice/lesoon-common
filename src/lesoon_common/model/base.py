@@ -1,10 +1,10 @@
 """ 通用Model基类模块. """
 from datetime import datetime
 
-from sqlalchemy import Column
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.schema import Column
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 
