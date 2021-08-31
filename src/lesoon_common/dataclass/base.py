@@ -6,7 +6,7 @@ from ..model import fields
 from ..model.schema import CamelSchema
 
 
-@dataclass(frozen=True)
+@dataclass
 class TokenUser:
     """token中存放的用户信息,通过current_user()获取."""
 
@@ -34,6 +34,8 @@ class TokenUser:
     if_deleted: bool = False
     # 是否管理员
     if_admin: bool = False
+    # token有效时间
+    token_expire: int = 0
     # app版本
     app_version: str = ""
     # app类型
@@ -84,6 +86,7 @@ class TokenUserSchema(CamelSchema):
     employee_attr = fields.Str(allow_none=True)
     if_deleted = fields.Bool(allow_none=True)
     if_admin = fields.Bool(allow_none=True)
+    token_expire = fields.Int(allow_none=True)
     app_version = fields.Str(allow_none=True)
     app_type = fields.Str(allow_none=True)
 

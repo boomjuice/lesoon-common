@@ -13,6 +13,8 @@ from .dataclass.resource import ImportData
 from .dataclass.resource import ImportParseResult
 from .exceptions import ResourceAttrError
 from .extensions import db
+from .globals import current_user
+from .model.base import BaseCompanyModel
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
 from .response import error_response
@@ -141,38 +143,52 @@ class BaseResource(Resource):
         """删除资源入口."""
         if not ids:
             return
+        cls.before_remove_many(ids)
         cls.remove_many(ids)
+        cls.after_remove_many(ids)
         db.session.commit()
+
+    @classmethod
+    def before_remove_many(cls, ids: t.List[str]):
+        """批量删除前操作."""
+        pass
 
     @classmethod
     def remove_many(cls, ids: t.List[str]):
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
 
+    @classmethod
+    def after_remove_many(cls, ids: t.List[str]):
+        """批量删除后操作."""
+        pass
+
 
 class LesoonResourceType(MethodViewType):
     """Resource类定义检测元类."""
 
+    base_classes = {"LesoonResource", "SaasResource"}
+
     def __init__(cls, name, bases, d):  # noqa
         super().__init__(name, bases, d)
-        if name != "LesoonResource":
-            model = None
-            schema = None
-            if not d.get("__model__", None):
+        if name not in cls.base_classes:
+            model = d.get("__model__", None)
+            schema = d.get("__schema__", None)
+            if not model:
                 for base in bases:
+                    # 父类查找
                     model = model or getattr(base, "__model__")  # noqa:B009
                     schema = schema or getattr(base, "__schema__")  # noqa:B009
-                if not model:
-                    raise ResourceAttrError(f"{name}未定义 __model__属性")
-                if not issubclass(model, Model):
-                    raise ResourceAttrError(f"{name}:{d['__model__']} 不是期望的类型:{Model}")
+            if not model:
+                raise ResourceAttrError(f"{name}未定义 __model__属性")
 
-                if not schema:
-                    raise ResourceAttrError(f"{name}未定义 __schema__属性")
+            if not issubclass(model, Model):
+                raise ResourceAttrError(f"{name}:{model} 不是期望的类型:{Model}")
 
-                if not issubclass(schema, SqlaCamelSchema):
-                    raise ResourceAttrError(
-                        f"{name}:{d['__schema__']} 不是期望的类型:{SqlaCamelSchema}"
-                    )
+            if not schema:
+                raise ResourceAttrError(f"{name}未定义 __schema__属性")
+
+            if not issubclass(schema, SqlaCamelSchema):
+                raise ResourceAttrError(f"{name}:{schema} 不是期望的类型:{SqlaCamelSchema}")
 
 
 class LesoonResourceItem(BaseResource):
@@ -204,6 +220,8 @@ class LesoonResourceItem(BaseResource):
 
 
 class LesoonResource(BaseResource, metaclass=LesoonResourceType):
+    __model__: t.Type[BaseModel] = None  # type:ignore
+
     if_item_lookup = True
 
     method_decorators = [jwt_required()]
@@ -302,3 +320,19 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
     def after_import_data(cls, import_data: ImportData):
         """导入数据后置操作."""
         pass
+
+
+class SaasResource(LesoonResource):
+    __model__: t.Type[BaseCompanyModel] = None  # type:ignore
+
+    @classmethod
+    def select_filter(cls) -> LesoonQuery:
+        query = super().select_filter()
+        return query.filter(cls.__model__.company_id == current_user.company_id)
+
+    @classmethod
+    def remove_many(cls, ids: t.List[str]):
+        cls.__model__.query.filter(
+            cls.__model__.id.in_(ids),
+            cls.__model__.company_id == current_user.company_id,
+        ).delete()  # type:ignore

@@ -16,6 +16,8 @@ Model = db.Model
 
 class IdModel(Model):  # type:ignore
     __abstract__ = True
+    _default_where = None
+
     id = Column(BIGINT(20), primary_key=True, comment="ID")
 
 

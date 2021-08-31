@@ -122,12 +122,12 @@ class TestSQLParser:
 
     def test_parse_related_models_single(self):
         query = User.query
-        r = parse_related_models(query=query)
+        r = parse_related_models(statement=query.statement)
         assert len(r) == 1
         assert r.pop() == User.__table__
 
     def test_parse_related_models_join(self):
         query = User.query.join(UserExt, User.id == UserExt.user_id)
-        r = parse_related_models(query=query)
+        r = parse_related_models(statement=query.statement)
         assert len(r) == 2
         assert r == [User.__table__, UserExt.__table__]

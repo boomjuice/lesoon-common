@@ -8,13 +8,14 @@ import typing as t
 
 from flask_sqlalchemy import Model
 from sqlalchemy.orm import InstrumentedAttribute
-from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.util import _ORMJoin
 from sqlalchemy.sql import expression as SqlaExp
 from sqlalchemy.sql.annotation import Annotated
 from sqlalchemy.sql.schema import Column
 from sqlalchemy.sql.schema import Table
 from sqlalchemy.sql.selectable import Alias
+from sqlalchemy.sql.selectable import Select
+from sqlalchemy.sql.selectable import Subquery
 
 from ..exceptions import ParseError
 from ..utils.str import udlcase
@@ -219,7 +220,7 @@ def parse_attribute_name(
     return attr
 
 
-def parse_related_models(query: Query) -> t.List[t.Union[Table, Alias]]:
+def parse_related_models(statement: Select) -> t.List[t.Union[Table, Alias]]:
     """获取Query对象查询涉及的所有表"""
     related_models: t.List[t.Union[Table, Alias]] = list()
 
@@ -230,13 +231,17 @@ def parse_related_models(query: Query) -> t.List[t.Union[Table, Alias]]:
     ):
         for _from in _froms:
             if isinstance(_from, (Table, Alias)):
-                # 表实体
-                related_models.append(_from)
+                if hasattr(_from, "element") and isinstance(_from.element, Subquery):
+                    # 子查询
+                    recur_realted_models(_from.element.element.froms, related_models)
+                else:
+                    # 表实体
+                    related_models.append(_from)
             elif isinstance(_from, _ORMJoin):
                 # join实体
                 recur_realted_models([_from.left, _from.right], related_models)
             else:
                 raise TypeError(f"type:{_from} = {type(_from)}")
 
-    recur_realted_models(_froms=query.statement.froms, related_models=related_models)
+    recur_realted_models(_froms=statement.froms, related_models=related_models)
     return related_models

@@ -76,6 +76,13 @@ class LesoonRequest(Request):
 
 
 class LesoonQuery(BaseQuery):
+    def __new__(cls, *args, **kwargs):
+        query = super().__new__(cls)
+        if args:
+            model = args[0].class_
+            query._default_where = model._default_where
+        return query
+
     def paginate(
         self,
         if_page: t.Optional[bool] = None,
@@ -111,7 +118,7 @@ class LesoonQuery(BaseQuery):
         : 注意 此方法依赖于Flask请求上下文
         """
         if any([add_where, add_sort]):
-            related_models = parse_related_models(self)
+            related_models = parse_related_models(self.statement)
             where_list, sort_list = parse_multi_condition(
                 request.where.copy(),  # type:ignore
                 request.sort.copy(),  # type:ignore

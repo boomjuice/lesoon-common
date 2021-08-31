@@ -18,6 +18,7 @@ from .model import fields
 from .model import SqlaCamelAutoSchema
 from .model import SqlaCamelSchema
 from .resource import LesoonResource
+from .resource import SaasResource
 from .response import error_response
 from .response import Response
 from .response import ResponseCode
