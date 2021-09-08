@@ -3,7 +3,6 @@
 """
 import typing as t
 
-from flask import request
 from flask.views import MethodViewType
 from flask_restful import Resource
 from flask_sqlalchemy import Model
@@ -13,7 +12,7 @@ from .dataclass.resource import ImportData
 from .dataclass.resource import ImportParseResult
 from .exceptions import ResourceAttrError
 from .extensions import db
-from .globals import current_user
+from .globals import request
 from .model.base import BaseCompanyModel
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
@@ -155,7 +154,8 @@ class BaseResource(Resource):
 
     @classmethod
     def remove_many(cls, ids: t.List[str]):
-        cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete()  # type:ignore
+        cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete(
+            synchronize_session=False)  # type:ignore
 
     @classmethod
     def after_remove_many(cls, ids: t.List[str]):
@@ -307,8 +307,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         if import_parse_result.err_extract_list:
             return error_response(
                 msg=f"导入结果: "
-                f"成功条数[{len(import_parse_result.obj_list)}] "
-                f"失败条数[{len(import_parse_result.err_extract_list)}]",
+                    f"成功条数[{len(import_parse_result.obj_list)}] "
+                    f"失败条数[{len(import_parse_result.err_extract_list)}]",
                 msg_detail=f"失败信息:{import_parse_result.err_extract_list}",
             )
         else:
@@ -328,11 +328,23 @@ class SaasResource(LesoonResource):
     @classmethod
     def select_filter(cls) -> LesoonQuery:
         query = super().select_filter()
-        return query.filter(cls.__model__.company_id == current_user.company_id)
+        return query.filter(cls.__model__.company_id == request.user.company_id)
+
+    @classmethod
+    def create_one(cls, data: dict):
+        # saas相关company_id都需要
+        data["companyId"] = data.get("companyId") or request.user.company_id
+        return super().create_one(data=data)
+
+    @classmethod
+    def create_many(cls, data_list: t.List[dict]):
+        for data in data_list:
+            data["companyId"] = data.get("companyId") or request.user.company_id
+        return super().create_many(data_list=data_list)
 
     @classmethod
     def remove_many(cls, ids: t.List[str]):
         cls.__model__.query.filter(
             cls.__model__.id.in_(ids),
-            cls.__model__.company_id == current_user.company_id,
+            cls.__model__.company_id == request.user.company_id,
         ).delete()  # type:ignore

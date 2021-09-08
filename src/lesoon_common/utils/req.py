@@ -3,6 +3,7 @@ import typing as t
 from functools import wraps
 
 from ..exceptions import RequestError
+from ..globals import request
 from ..response import ResponseCode
 from ..utils.str import camelcase
 
@@ -20,7 +21,11 @@ class Param:
         "form": ResponseCode.ReqFormError,
     }
 
-    allow_location = {"params": "args", "body": "json", "form": "form"}
+    allow_locations = {
+        "params": lambda: request.args,
+        "body": lambda: request.get_json(silent=True),
+        "form": lambda: request.form,
+    }
 
     def __init__(
         self,
@@ -37,8 +42,8 @@ class Param:
 
         self.deserialize = deserialize or data_type
 
-        if loc not in self.allow_location.keys():
-            raise ValueError(f"{loc}不是{self.allow_location.keys()}中的值")
+        if loc not in self.allow_locations.keys():
+            raise ValueError(f"{loc}不是{self.allow_locations.keys()}中的值")
         self.loc = loc
 
         self.msg = msg or f"传参异常:{key}"
@@ -48,20 +53,28 @@ class Param:
 
 
 def _get_request_param(param: Param) -> t.Any:
-    from ..globals import request
+    loc_func = Param.allow_locations.get(param.loc)
 
-    prop = getattr(request, Param.allow_location[param.loc])
-    if not prop:
+    if not loc_func:
         return None
 
-    if not param.key:
-        return prop
+    data = loc_func()
 
-    value = prop.get(param.key)
+    if not param.key:
+        # 没有参数键,直接返回
+        return data
+
+    try:
+        value = data.get(param.key)  # type:ignore[union-attr]
+    except AttributeError:
+        value = None
+
     if value is None:
         if param.default is inspect.Parameter.empty:
+            # 不允许为空
             raise RequestError(code=param.miss_code, msg=param.msg)
         else:
+            # 允许为空,存在默认值
             return param.default
     else:
         try:

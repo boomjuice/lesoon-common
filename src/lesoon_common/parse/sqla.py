@@ -231,15 +231,14 @@ def parse_related_models(statement: Select) -> t.List[t.Union[Table, Alias]]:
     ):
         for _from in _froms:
             if isinstance(_from, (Table, Alias)):
-                if hasattr(_from, "element") and isinstance(_from.element, Subquery):
-                    # 子查询
-                    recur_realted_models(_from.element.element.froms, related_models)
-                else:
-                    # 表实体
-                    related_models.append(_from)
+                # 表实体
+                related_models.append(_from)
             elif isinstance(_from, _ORMJoin):
                 # join实体
                 recur_realted_models([_from.left, _from.right], related_models)
+            elif isinstance(_from, Subquery):
+                # 子查询
+                recur_realted_models(_from.element.froms, related_models)
             else:
                 raise TypeError(f"type:{_from} = {type(_from)}")
 

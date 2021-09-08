@@ -36,6 +36,8 @@ class TokenUser:
     if_admin: bool = False
     # token有效时间
     token_expire: int = 0
+    # 软件版本号
+    version_no: str = ""
     # app版本
     app_version: str = ""
     # app类型
@@ -87,6 +89,7 @@ class TokenUserSchema(CamelSchema):
     if_deleted = fields.Bool(allow_none=True)
     if_admin = fields.Bool(allow_none=True)
     token_expire = fields.Int(allow_none=True)
+    version_no = fields.Str(allow_none=True)
     app_version = fields.Str(allow_none=True)
     app_type = fields.Str(allow_none=True)
 

@@ -3,12 +3,12 @@ import datetime
 import typing as t
 
 from flask import current_app
+from flask import has_request_context
 from flask import make_response
 from flask import render_template_string
 from flask import request
 from flask.wrappers import Request
 from flask_debugtoolbar import DebugToolbarExtension
-from flask_jwt_extended import current_user
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import BaseQuery
 from flask_sqlalchemy import Pagination
@@ -65,13 +65,15 @@ class LesoonRequest(Request):
 
     @cached_property
     def user(self):
+        from .globals import current_user
+
         return current_user
 
     @cached_property
     def token(self) -> str:
-        try:
+        if has_request_context():
             return get_token()
-        except RuntimeError:
+        else:
             return ""
 
 
