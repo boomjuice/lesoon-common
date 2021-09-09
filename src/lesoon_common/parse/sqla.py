@@ -45,10 +45,9 @@ def parse_filter(where: dict, model: t.Type[Model]) -> SqlaExpList:
     :param where: 待转换字典 {"id_eq":"1"},{"a.id_lte":"2"}...
     :param model: sqlalchemy.Model
     """
+    conditions: SqlaExpList = list()
     if len(where) == 0:
-        return []
-
-    conditions = []
+        return conditions
 
     for key, value in list(where.items()):
         column = parse_prefix_alias(key, model)
@@ -57,6 +56,7 @@ def parse_filter(where: dict, model: t.Type[Model]) -> SqlaExpList:
         condition = parse_suffix_operation(column, value, model)
         if isinstance(condition, SqlaExp):
             conditions.append(condition)
+            # 匹配上就剔除过滤条件
             del where[key]
 
     return conditions
@@ -71,16 +71,17 @@ def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
     conditions: SqlaExpList = list()
     if not isinstance(sort_list, list) or sort_list is None:
         return conditions
-    for sort_pair in sort_list:
+
+    for sort_pair in sort_list.copy():
         col, order = sort_pair[0], sort_pair[-1]
         col = parse_prefix_alias(col, model)
-        if not col:
+        if col is None:
             continue
-        attr = parse_attribute_name(col, model)
-        if isinstance(attr, (Column, InstrumentedAttribute)):
-            if order == -1:
-                attr = attr.desc()
-            conditions.append(attr)
+        if (attr := parse_attribute_name(col, model)) is not None:
+            conditions.append(attr.desc() if order == -1 else attr)
+            # 匹配上就剔除过滤条件
+            sort_list.remove(sort_pair)
+
     return conditions
 
 
@@ -200,7 +201,7 @@ def parse_suffix_operation(
     else:
         attr = parse_attribute_name(column, model)
         op = "in" if isinstance(value, list) else "eq"
-    if not isinstance(attr, (Column, InstrumentedAttribute)):
+    if attr is None:
         return None
     return OpParserFactory.create(attr, op, value).parse()
 

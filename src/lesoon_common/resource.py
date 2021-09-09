@@ -24,8 +24,8 @@ from .wrappers import LesoonQuery
 
 
 class BaseResource(Resource):
-    __model__ = None
-    __schema__ = None
+    __model__: t.Type[BaseModel] = None  # type:ignore
+    __schema__: t.Type[SqlaCamelSchema] = None  # type:ignore
 
     @classmethod
     def get_schema(cls):
@@ -155,7 +155,8 @@ class BaseResource(Resource):
     @classmethod
     def remove_many(cls, ids: t.List[str]):
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete(
-            synchronize_session=False)  # type:ignore
+            synchronize_session=False
+        )
 
     @classmethod
     def after_remove_many(cls, ids: t.List[str]):
@@ -220,8 +221,6 @@ class LesoonResourceItem(BaseResource):
 
 
 class LesoonResource(BaseResource, metaclass=LesoonResourceType):
-    __model__: t.Type[BaseModel] = None  # type:ignore
-
     if_item_lookup = True
 
     method_decorators = [jwt_required()]
@@ -232,11 +231,11 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     def put(self):
         result = self.__class__.update(data=request.json)
-        return success_response(result=result)
+        return success_response(result=result, msg="更新成功")
 
     def post(self):
         result = self.__class__.create(data=request.json)
-        return success_response(result=result), 201
+        return success_response(result=result, msg="新建成功"), 201
 
     def delete(self):
         try:
@@ -246,7 +245,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             raise BadRequestKeyError("缺少请求参数ids")
         if any(ids):
             self.__class__.remove(ids)
-        return success_response()
+        return success_response(msg="删除成功")
 
     @classmethod
     def union_operate(cls, insert_rows: list, update_rows: list, delete_rows: list):
@@ -267,7 +266,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         pass
 
     @classmethod
-    def import_process(
+    def import_data_process(
         cls, import_data: ImportData, import_parse_result: ImportParseResult
     ):
         """导入操作写库逻辑."""
@@ -288,7 +287,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         """数据导入入口."""
         cls.before_import_data(import_data)
 
-        import_parse_result = parse_import_data(
+        import_parse_result: ImportParseResult = parse_import_data(
             import_data, cls.__model__, check_exist=True
         )
 
@@ -300,15 +299,15 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             msg_detail = "<br/>".join(import_parse_result.err_extract_list)
             return error_response(msg="未解析到数据", msg_detail=msg_detail)
 
-        cls.import_process(import_data, import_parse_result)
+        cls.import_data_process(import_data, import_parse_result)
 
         cls.after_import_data(import_data)
 
         if import_parse_result.err_extract_list:
             return error_response(
                 msg=f"导入结果: "
-                    f"成功条数[{len(import_parse_result.obj_list)}] "
-                    f"失败条数[{len(import_parse_result.err_extract_list)}]",
+                f"成功条数[{len(import_parse_result.obj_list)}] "
+                f"失败条数[{len(import_parse_result.err_extract_list)}]",
                 msg_detail=f"失败信息:{import_parse_result.err_extract_list}",
             )
         else:
@@ -341,6 +340,11 @@ class SaasResource(LesoonResource):
         for data in data_list:
             data["companyId"] = data.get("companyId") or request.user.company_id
         return super().create_many(data_list=data_list)
+
+    @classmethod
+    def before_import_insert_one(cls, obj: BaseCompanyModel, import_data: ImportData):
+        # 导入CompanyId取操作用户的companyId
+        obj.company_id = request.user.company_id
 
     @classmethod
     def remove_many(cls, ids: t.List[str]):

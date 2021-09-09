@@ -1,6 +1,7 @@
 import datetime as dt
 import decimal
 import logging
+import typing as t
 
 from flask_sqlalchemy import Model
 from marshmallow.utils import from_iso_datetime
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 def parse_import_data(
-    import_data: ImportData, model: Model, check_exist: bool = False
+    import_data: ImportData, model: t.Type[Model], check_exist: bool = False
 ) -> ImportParseResult:
     """
     解析导入数据,将其转换为对应的模型, 并记录转换过程中的异常
@@ -34,23 +35,28 @@ def parse_import_data(
     col_attrs = list()
 
     try:
-        flag = True
         for col_name in import_data.col_names:
             attr = parse_attribute_name(col_name, model)
             if attr is None:
                 raise AttributeError(f"{model}不存在列:{col_name}")
             col_attrs.append(attr)
 
+        flag = True
         for rid, row in enumerate(import_data.data_list):
+            # 唯一约束键对应的值
             union_key_value = ""
+            # 唯一约束查询条件
             union_filter = list()
+            # 表对应的model对象
             obj = model()
             for cid, attr in enumerate(col_attrs):
                 if cid >= len(row):
                     raise AttributeError(f"列[{attr.name}]在数据集中不存在")
                 col_value = row[cid]
 
-                # 位置, chr将cid转换为大写字母
+                # Excel中的位置
+                # chr(65) = A
+                # chr(65+cid) = Excel中的列
                 excel_position = (
                     f"Excel [{rid + import_data.import_start_index}行,{chr(65 + cid)}列]"
                     f"{attr.name}:{col_value}"
@@ -97,8 +103,8 @@ def parse_import_data(
                 setattr(obj, attr.name, col_value)
 
             if union_key_value:
+                # excel中是否已存在当前数据
                 if union_key_value in union_key_value_set:
-                    # excel中是否已存在当前数据
                     err_output_list.append(
                         f"Excel [{rid + import_data.import_start_index}行,] "
                         f"违反唯一约束[{import_data.union_key_name}]"

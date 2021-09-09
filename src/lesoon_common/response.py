@@ -5,8 +5,8 @@ import typing as t
 
 @enum.unique
 class ResponseCode(enum.Enum):
-    Success = ("0", "success", "")
-    Error = ("5001", "unkown error", "系统异常")
+    Success = ("0", "操作成功", "")
+    Error = ("5001", "系统异常", "系统异常")
 
     RemoteCallError = ("3001", "远程调用异常", "请检查应用或传参是否异常")
 
