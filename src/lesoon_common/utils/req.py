@@ -51,6 +51,16 @@ class Param:
         self.miss_code = self.param_miss_code[loc]
         self.error_code = self.param_error_code[loc]
 
+    def __eq__(self, other):
+        # 单元测试需要
+        return (
+            self.key == other.key
+            and self.default == other.default
+            and self.data_type == other.data_type
+            and self.deserialize == self.deserialize
+            and self.loc == other.loc
+        )
+
 
 def _get_request_param(param: Param) -> t.Any:
     loc_func = Param.allow_locations.get(param.loc)

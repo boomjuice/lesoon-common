@@ -4,6 +4,7 @@ from flask_jwt_extended import create_access_token
 
 from .base import LesoonApi
 from .base import LesoonFlask
+from .code import ResponseCode
 from .exceptions import RequestError
 from .exceptions import ServiceError
 from .extensions import ca
@@ -21,7 +22,6 @@ from .resource import LesoonResource
 from .resource import SaasResource
 from .response import error_response
 from .response import Response
-from .response import ResponseCode
 from .response import success_response
 from .utils.jwt import jwt_required
 from .utils.req import Param

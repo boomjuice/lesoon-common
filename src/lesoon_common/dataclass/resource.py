@@ -49,8 +49,8 @@ class ImportData:
 class ImportDataSchema(CamelSchema):
     col_names = fields.List(fields.Str())
     must_array = fields.List(fields.Bool())
-    union_key = fields.List(fields.Str())
-    union_key_name = fields.Str()
+    union_key = fields.List(fields.Str(), allow_none=True)
+    union_key_name = fields.Str(allow_none=True)
     validate_all = fields.Bool()
     master_fields = fields.Dict(allow_none=True)
     if_async = fields.Bool(data_key="async")
@@ -60,16 +60,22 @@ class ImportDataSchema(CamelSchema):
     module = fields.Str()
     file_name = fields.Str()
     import_start_index = fields.Int()
-    data_list = fields.List(fields.List(fields.Str()))
+    data_list = fields.List(fields.List(fields.Str(allow_none=True)))
 
     @ma.pre_load
     def pre_process(self, data, **kwargs):
         """预处理导入数据,检查数据合法性."""
         data["colNames"] = data["colNames"].strip("").split(",")
         data["mustArray"] = data["mustArray"].strip("").split(",")
-        data["unionKey"] = data["unionKey"].strip("").split(",")
+        data["unionKey"] = None
+        data["unionKeyName"] = data.get("unionKeyName")
+
+        if data.get("unionKey"):
+            data["unionKey"] = data.get("unionKey").strip("").split(",")
+
         if not (data["colNames"] and data["mustArray"]):
             raise ma.ValidationError("参数colNames与mustArray不能为空")
+
         if len(data["colNames"]) != len(data["mustArray"]):
             raise ma.ValidationError("参数colNames与mustArray长度不一致")
         return data

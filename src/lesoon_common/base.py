@@ -6,8 +6,10 @@ import typing as t
 from flask import current_app
 from flask import Flask
 from flask_restful import Api
+from sqlalchemy.exc import DatabaseError
 from werkzeug.exceptions import HTTPException
 
+from .code import PyMysqlCode
 from .exceptions import ServiceError
 from .extensions import ca
 from .extensions import db
@@ -21,16 +23,27 @@ from .utils.str import camelcase
 from .view import LesoonView
 from .wrappers import LesoonRequest
 
+sqlalchemy_codes = {"pymysql": PyMysqlCode}
+
 
 def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
+    current_app.logger.exception(error)
     if isinstance(error, HTTPException):
         return error
     elif isinstance(error, ServiceError):
         return error_response(code=error.code, msg=error.msg)
     elif hasattr(error, "code") and hasattr(error, "msg"):
         return error_response(code=error.code, msg=error.msg)  # type:ignore
+    elif isinstance(error, DatabaseError):
+        msg = errmsg = error._message()
+        err_package = error.orig.__module__.split(".", 1)[0]
+        errcode = error.orig.args[0]
+
+        code_class = sqlalchemy_codes.get(err_package, None)
+        if code_class and code_class.is_exist(errcode):
+            msg = code_class(errcode).msg  # type:ignore[call-arg]
+        return error_response(msg=msg, msg_detail=errmsg)
     else:
-        current_app.logger.exception(error)
         return error_response(msg_detail=f"{error.__class__} : {str(error)}")
 
 
