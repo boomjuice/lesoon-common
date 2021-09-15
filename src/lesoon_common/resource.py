@@ -16,10 +16,12 @@ from .globals import request
 from .model.base import BaseCompanyModel
 from .model.base import BaseModel
 from .model.schema import SqlaCamelSchema
+from .parse.sqla import parse_attribute_name
 from .response import error_response
 from .response import success_response
 from .utils.jwt import jwt_required
 from .utils.resource import parse_import_data
+from .utils.str import udlcase
 from .wrappers import LesoonQuery
 
 
@@ -62,7 +64,7 @@ class BaseResource(Resource):
         pass
 
     @classmethod
-    def create_one(cls, data: dict):
+    def _create_one(cls, data: dict):
         """新增单条资源."""
         _obj = cls.get_schema().load(data)
         db.session.add(_obj)
@@ -79,7 +81,7 @@ class BaseResource(Resource):
         pass
 
     @classmethod
-    def create_many(cls, data_list: t.List[dict]):
+    def _create_many(cls, data_list: t.List[dict]):
         """批量新增资源."""
         _objs = cls.get_schema().load(data_list, many=True)
         db.session.bulk_save_objects(_objs)
@@ -91,18 +93,27 @@ class BaseResource(Resource):
         pass
 
     @classmethod
+    def create_one(cls, data: dict):
+        cls.before_create_one(data)
+        _obj = cls._create_one(data)
+        cls.after_create_one(data, _obj)
+        return _obj
+
+    @classmethod
+    def create_many(cls, data_list: t.List[dict]):
+        cls.before_create_many(data_list)
+        _objs = cls._create_many(data_list)
+        cls.after_create_many(data_list, _objs)
+        return _objs
+
+    @classmethod
     def create(cls, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
+        result = None
         if isinstance(data, list):
-            cls.before_create_many(data)
-            _objs = cls.create_many(data)
-            cls.after_create_many(data, _objs)
-            result = None
+            cls.create_many(data)
         else:
-            cls.before_create_one(data)
-            _obj = cls.create_one(data)
-            cls.after_create_one(data, _obj)
-            result = _obj
+            result = cls.create_one(data)
 
         db.session.commit()
         result = cls.get_schema().dump(result)
@@ -129,8 +140,9 @@ class BaseResource(Resource):
     @classmethod
     def update(cls, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
+        result = None
         if isinstance(data, list):
-            result = cls.update_many(data)
+            cls.update_many(data)
         else:
             result = cls.update_one(data)
         db.session.commit()
@@ -138,22 +150,13 @@ class BaseResource(Resource):
         return result
 
     @classmethod
-    def remove(cls, ids: t.List[str]):
-        """删除资源入口."""
-        if not ids:
-            return
-        cls.before_remove_many(ids)
-        cls.remove_many(ids)
-        cls.after_remove_many(ids)
-        db.session.commit()
-
-    @classmethod
     def before_remove_many(cls, ids: t.List[str]):
         """批量删除前操作."""
         pass
 
     @classmethod
-    def remove_many(cls, ids: t.List[str]):
+    def _remove_many(cls, ids: t.List[str]):
+        """批量删除."""
         cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete(
             synchronize_session=False
         )
@@ -162,6 +165,20 @@ class BaseResource(Resource):
     def after_remove_many(cls, ids: t.List[str]):
         """批量删除后操作."""
         pass
+
+    @classmethod
+    def remove_many(cls, ids: t.List[str]):
+        cls.before_remove_many(ids)
+        cls._remove_many(ids)
+        cls.after_remove_many(ids)
+
+    @classmethod
+    def remove(cls, ids: t.List[str]):
+        """删除资源入口."""
+        if not ids:
+            return
+        cls.remove_many(ids)
+        db.session.commit()
 
 
 class LesoonResourceType(MethodViewType):
@@ -262,8 +279,23 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     @classmethod
     def before_import_insert_one(cls, obj: Model, import_data: ImportData):
-        """导入数据写库前操作."""
-        pass
+        """导入数据写库前操作.
+        默认会进行查库校验当前对象是否存在
+        """
+        union_filter = list()
+        for key in import_data.union_key:
+            attr = parse_attribute_name(key, cls.__model__)
+            union_filter.append(attr.__eq__(getattr(obj, udlcase(key))))
+
+        if len(union_filter) and cls.__model__.query.filter(*union_filter).count():
+            msg_detail = (
+                f"Excel [{obj.excel_row_pos}行,] "
+                f"根据约束[{import_data.union_key_name}]数据已存在"
+            )
+            if import_data.validate_all:
+                obj.error = msg_detail
+            else:
+                raise ValueError(msg_detail)
 
     @classmethod
     def import_data_process(
@@ -273,8 +305,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         _objs = list()
         for obj in import_parse_result.obj_list:
             cls.before_import_insert_one(obj, import_data)
-            if getattr(obj, "error", None):
-                import_parse_result.err_extract_list.append(obj.error)
+            if hasattr(obj, "error"):
+                import_parse_result.insert_err_list.append(obj.error)
             else:
                 _objs.append(obj)
 
@@ -288,27 +320,27 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         cls.before_import_data(import_data)
 
         import_parse_result: ImportParseResult = parse_import_data(
-            import_data, cls.__model__, check_exist=True
+            import_data, cls.__model__
         )
 
-        if import_parse_result.err_output_list:
-            msg_detail = "数据异常<br/>" + "<br/>".join(import_parse_result.err_output_list)
+        if import_parse_result.parse_err_list:
+            msg_detail = "数据异常<br/>" + "<br/>".join(import_parse_result.parse_err_list)
             return error_response(msg="导入异常,请根据错误信息检查数据", msg_detail=msg_detail)
 
         if not import_parse_result.obj_list:
-            msg_detail = "<br/>".join(import_parse_result.err_extract_list)
+            msg_detail = "<br/>".join(import_parse_result.insert_err_list)
             return error_response(msg="未解析到数据", msg_detail=msg_detail)
 
         cls.import_data_process(import_data, import_parse_result)
 
         cls.after_import_data(import_data)
 
-        if import_parse_result.err_extract_list:
+        if import_parse_result.insert_err_list:
             return error_response(
                 msg=f"导入结果: "
                 f"成功条数[{len(import_parse_result.obj_list)}] "
-                f"失败条数[{len(import_parse_result.err_extract_list)}]",
-                msg_detail=f"失败信息:{import_parse_result.err_extract_list}",
+                f"失败条数[{len(import_parse_result.insert_err_list)}]",
+                msg_detail=f"失败信息:{import_parse_result.insert_err_list}",
             )
         else:
             return success_response(
@@ -330,24 +362,26 @@ class SaasResource(LesoonResource):
         return query.filter(cls.__model__.company_id == request.user.company_id)
 
     @classmethod
-    def create_one(cls, data: dict):
+    def _create_one(cls, data: dict):
         # saas相关company_id都需要
         data["companyId"] = data.get("companyId") or request.user.company_id
-        return super().create_one(data=data)
+        return super()._create_one(data=data)
 
     @classmethod
-    def create_many(cls, data_list: t.List[dict]):
+    def _create_many(cls, data_list: t.List[dict]):
         for data in data_list:
             data["companyId"] = data.get("companyId") or request.user.company_id
-        return super().create_many(data_list=data_list)
+        return super()._create_many(data_list=data_list)
 
     @classmethod
     def before_import_insert_one(cls, obj: BaseCompanyModel, import_data: ImportData):
-        # 导入CompanyId取操作用户的companyId
+        # 过滤条件以及唯一约束都要加上companyId做验证
+        import_data.union_key.append("companyId")
         obj.company_id = request.user.company_id
+        super().before_import_insert_one(obj, import_data)
 
     @classmethod
-    def remove_many(cls, ids: t.List[str]):
+    def _remove_many(cls, ids: t.List[str]):
         cls.__model__.query.filter(
             cls.__model__.id.in_(ids),
             cls.__model__.company_id == request.user.company_id,

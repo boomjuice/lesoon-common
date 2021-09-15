@@ -22,3 +22,7 @@ class TestReqParser:
     def test_extract_where_arg_null(self):
         where = ""
         assert extract_where_arg(where) == {}
+
+    def test_extract_where_special_char(self):
+        where = "%7B%22loginName_like%22:%22a%22%7D"
+        assert extract_where_arg(where) == {"loginName_like": "a"}

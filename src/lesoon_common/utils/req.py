@@ -107,7 +107,7 @@ def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
     func_params = inspect.signature(func).parameters
 
     for arg_name, arg_param in func_params.items():
-        # 类方法特殊处理
+        # 实例方法特殊处理
         if arg_name == "self":
             continue
 
@@ -123,6 +123,7 @@ def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
         )
         param_dict[arg_name] = param
 
+    del func_params
     return param_dict
 
 

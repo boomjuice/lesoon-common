@@ -2,6 +2,7 @@
 import json
 import re
 import typing as t
+from urllib import parse
 
 from ..exceptions import ParseError
 
@@ -9,6 +10,8 @@ from ..exceptions import ParseError
 def extract_where_arg(where) -> t.Dict[str, str]:
     if where:
         try:
+            # 特殊字符转义处理
+            where = parse.unquote(where)
             _where = json.loads(where)
             if not isinstance(_where, dict):
                 return dict()

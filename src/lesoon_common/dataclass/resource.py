@@ -1,5 +1,6 @@
 import typing as t
 from dataclasses import dataclass
+from dataclasses import field
 
 import marshmallow as ma
 from flask_sqlalchemy import Model
@@ -16,7 +17,7 @@ class ImportData:
     col_names: t.List[str]
     # 是否必填  [true,false,true]
     must_array: t.List[bool]
-    # 联合主键
+    # 联合主键(驼峰) [companyId,userId,loginName]
     union_key: t.List[str]
     # 联合主键名称
     union_key_name: str
@@ -26,7 +27,7 @@ class ImportData:
     err_to_excel: bool
     # 导入数据
     data_list: t.List[list]
-    # 是否前置验证
+    # 是否前置验证 (校验数据库层面重复,写入Excel中)
     validate_all: bool = False
     # 主表字段
     master_fields: str = ""
@@ -89,6 +90,9 @@ class ImportDataSchema(CamelSchema):
 class ImportParseResult:
     """导入数据解析类."""
 
+    # model对象列表
     obj_list: t.List[Model]
-    err_output_list: t.List[str]
-    err_extract_list: t.List[str]
+    # 解析异常信息列表
+    parse_err_list: t.List[str]
+    # 写入异常信息列表
+    insert_err_list: t.List[str] = field(default_factory=list)
