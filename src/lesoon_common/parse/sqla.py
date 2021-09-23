@@ -78,7 +78,7 @@ def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
         if col is None:
             continue
         if (attr := parse_attribute_name(col, model)) is not None:
-            conditions.append(attr.desc() if order == -1 else attr)
+            conditions.append(attr.desc() if order == "desc" else attr)
             # 匹配上就剔除过滤条件
             sort_list.remove(sort_pair)
 
@@ -86,6 +86,8 @@ def parse_sort(sort_list: t.List[list], model: t.Type[Model]) -> SqlaExpList:
 
 
 class SqlaOpParser(metaclass=abc.ABCMeta):
+    op_dict: t.Dict[str, t.Any] = dict()
+
     def __init__(
         self,
         column: InstrumentedAttribute,
@@ -101,8 +103,8 @@ class SqlaOpParser(metaclass=abc.ABCMeta):
         pass
 
 
-class CmprOpParser(SqlaOpParser):
-    comparison_mapper = {
+class CmpOpParser(SqlaOpParser):
+    op_dict = {
         "eq": sqla_op.eq,
         "ne": sqla_op.ne,
         "lt": sqla_op.lt,
@@ -112,15 +114,15 @@ class CmprOpParser(SqlaOpParser):
     }
 
     def parse(self):
-        cmpr_op = self.comparison_mapper[self.operate]
-        return cmpr_op(self.column, self.value)
+        cmp_op = self.op_dict[self.operate]
+        return cmp_op(self.column, self.value)
 
 
 class InOpParser(SqlaOpParser):
-    in_mapper = {"in": "in_", "notIn": "notin_"}
+    op_dict = {"in": "in_", "notIn": "notin_"}
 
     def parse(self):
-        attr_op = self.in_mapper[self.operate]
+        attr_op = self.op_dict[self.operate]
         if isinstance(self.value, list):
             # 数组
             return getattr(self.column, attr_op)(self.value)
@@ -133,7 +135,7 @@ class InOpParser(SqlaOpParser):
 
 
 class LikeOpParser(SqlaOpParser):
-    like_mapper = {
+    op_dict = {
         "like": "like",
         "ilike": "ilike",
         "notLike": "not_like",
@@ -141,12 +143,14 @@ class LikeOpParser(SqlaOpParser):
     }
 
     def parse(self):
-        attr_op = self.like_mapper[self.operate]
+        attr_op = self.op_dict[self.operate]
         value = self.value if str(self.value).count("%") else f"%{self.value}%"
         return getattr(self.column, attr_op)(value)
 
 
 class OpParserFactory:
+    parser_set: t.Set[t.Type[SqlaOpParser]] = {CmpOpParser, LikeOpParser, InOpParser}
+
     @classmethod
     def create(
         cls,
@@ -154,14 +158,9 @@ class OpParserFactory:
         operate: str,
         value: t.Union[int, str, t.List[t.Any]],
     ) -> SqlaOpParser:
-        if operate in CmprOpParser.comparison_mapper:
-            return CmprOpParser(column, operate, value)
-
-        elif operate.lower().count("like"):
-            return LikeOpParser(column, operate, value)
-
-        elif operate.lower().count("in"):
-            return InOpParser(column, operate, value)
+        for parser in cls.parser_set:
+            if operate in parser.op_dict.keys():
+                return parser(column, operate, value)
         else:
             # 未定义的查询操作
             raise ParseError(f"无法解析的查询参数 {column}:{value}")

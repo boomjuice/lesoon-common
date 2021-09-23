@@ -34,7 +34,7 @@ class LesoonRequest(Request):
         return where
 
     @cached_property
-    def sort(self) -> t.List[t.Tuple[str, int]]:
+    def sort(self) -> t.List[t.Tuple[str, str]]:
         sort = extract_sort_arg(self.args.get("sort"))
         return sort
 
@@ -78,13 +78,6 @@ class LesoonRequest(Request):
 
 
 class LesoonQuery(BaseQuery):
-    def __new__(cls, *args, **kwargs):
-        query = super().__new__(cls)
-        if args:
-            model = args[0].class_
-            query._default_where = model._default_where
-        return query
-
     def paginate(
         self,
         if_page: t.Optional[bool] = None,

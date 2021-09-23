@@ -1,6 +1,9 @@
-from flask_restful import Resource
+import pytest
 from werkzeug.exceptions import MethodNotAllowed
 
+from .api import api
+from .api import bp
+from .api import UserResource
 from lesoon_common.base import handle_exception
 from lesoon_common.base import LesoonFlask
 from lesoon_common.exceptions import ServiceError
@@ -49,6 +52,13 @@ class TestLesoonFlask:
 
 
 class TestLesoonApi:
-    def test_register_resource(self):
-        class TestResource(Resource):
-            pass
+    @pytest.fixture(autouse=True)
+    def setup_method(self, app):
+        api.register_resource(UserResource, "/User", endpoint="user")
+        app.register_blueprint(bp)
+
+    def test_register_resource(self, app):
+        url_rule = app.url_map._rules
+        rules = [_.rule for _ in url_rule]
+        assert "/User" in rules
+        assert "/User/<int:id>" in rules

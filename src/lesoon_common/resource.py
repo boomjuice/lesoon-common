@@ -11,6 +11,7 @@ from werkzeug.exceptions import BadRequestKeyError
 from .dataclass.resource import ImportData
 from .dataclass.resource import ImportParseResult
 from .exceptions import ResourceAttrError
+from .exceptions import ServiceError
 from .extensions import db
 from .globals import request
 from .model.base import BaseCompanyModel
@@ -295,7 +296,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             if import_data.validate_all:
                 obj.error = msg_detail
             else:
-                raise ValueError(msg_detail)
+                raise ServiceError(msg=msg_detail)
 
     @classmethod
     def import_data_process(
@@ -336,11 +337,12 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         cls.after_import_data(import_data)
 
         if import_parse_result.insert_err_list:
+            msg_detail = " \n ".join(import_parse_result.insert_err_list)
             return error_response(
                 msg=f"导入结果: "
                 f"成功条数[{len(import_parse_result.obj_list)}] "
                 f"失败条数[{len(import_parse_result.insert_err_list)}]",
-                msg_detail=f"失败信息:{import_parse_result.insert_err_list}",
+                msg_detail=f"失败信息:{msg_detail}",
             )
         else:
             return success_response(
@@ -376,7 +378,6 @@ class SaasResource(LesoonResource):
     @classmethod
     def before_import_insert_one(cls, obj: BaseCompanyModel, import_data: ImportData):
         # 过滤条件以及唯一约束都要加上companyId做验证
-        import_data.union_key.append("companyId")
         obj.company_id = request.user.company_id
         super().before_import_insert_one(obj, import_data)
 

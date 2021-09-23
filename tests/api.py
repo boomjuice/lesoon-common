@@ -10,5 +10,6 @@ api = LesoonApi(bp)
 
 
 class UserResource(LesoonResource):
+    method_decorators = []
     __model__ = User
     __schema__ = UserSchema

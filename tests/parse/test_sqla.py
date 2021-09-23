@@ -113,7 +113,7 @@ class TestSQLParser:
         assert parse_sort([], User) == []
 
     def test_parse_sort_standard(self):
-        sort_list = [["id"], ["status", -1]]
+        sort_list = [("id",), ("status", "desc")]
         expected_expression = [User.id, User.status.desc()]
         r = parse_sort(sort_list, User)
         # 字段无compare函数

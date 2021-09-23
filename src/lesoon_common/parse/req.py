@@ -7,7 +7,7 @@ from urllib import parse
 from ..exceptions import ParseError
 
 
-def extract_where_arg(where) -> t.Dict[str, str]:
+def extract_where_arg(where: t.Optional[str] = None) -> t.Dict[str, str]:
     if where:
         try:
             # 特殊字符转义处理
@@ -23,19 +23,19 @@ def extract_where_arg(where) -> t.Dict[str, str]:
         return dict()
 
 
-def extract_sort_arg(sort) -> t.List[t.Tuple[str, int]]:
+def extract_sort_arg(sort: t.Optional[str] = None) -> t.List[t.Tuple[str, str]]:
     if sort:
-        if re.match(r"^[-,\w.]+$", sort):
+        if re.match(r"[,\w]+ ((asc)|(desc))", sort):
             arg = []
             for s in sort.split(","):
-                if s.startswith("-"):
-                    # 倒序
-                    arg.append((s[1:], -1))
-                else:
-                    # 正序
-                    arg.append((s, 1))
+                # s = 'id asc' or 'id desc'
+                col, order = s.split(" ", 1)
+                arg.append((col, order))
             return arg
         else:
-            return json.loads(sort)
+            try:
+                return json.loads(sort)
+            except json.JSONDecodeError:
+                return list()
     else:
         return list()
