@@ -17,8 +17,8 @@ from sqlalchemy.sql.selectable import Alias
 from sqlalchemy.sql.selectable import Select
 from sqlalchemy.sql.selectable import Subquery
 
-from ..exceptions import ParseError
-from ..utils.str import udlcase
+from lesoon_common.exceptions import ParseError
+from lesoon_common.utils.str import udlcase
 
 SqlaExp = SqlaExp.BinaryExpression
 SqlaExpList = t.List[SqlaExp]

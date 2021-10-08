@@ -2,10 +2,10 @@ import inspect
 import typing as t
 from functools import wraps
 
-from ..exceptions import RequestError
-from ..globals import request
-from ..response import ResponseCode
-from ..utils.str import camelcase
+from lesoon_common.exceptions import RequestError
+from lesoon_common.globals import request
+from lesoon_common.response import ResponseCode
+from lesoon_common.utils.str import camelcase
 
 
 class Param:

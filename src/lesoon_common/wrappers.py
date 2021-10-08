@@ -15,13 +15,13 @@ from flask_sqlalchemy import Pagination
 from jose import jwe
 from werkzeug.utils import cached_property
 
-from .parse.req import extract_sort_arg
-from .parse.req import extract_where_arg
-from .parse.sqla import parse_multi_condition
-from .parse.sqla import parse_related_models
-from .response import error_response
-from .response import ResponseCode
-from .utils.jwt import get_token
+from lesoon_common.parse.req import extract_sort_arg
+from lesoon_common.parse.req import extract_where_arg
+from lesoon_common.parse.sqla import parse_multi_condition
+from lesoon_common.parse.sqla import parse_related_models
+from lesoon_common.response import error_response
+from lesoon_common.response import ResponseCode
+from lesoon_common.utils.jwt import get_token
 
 
 class LesoonRequest(Request):

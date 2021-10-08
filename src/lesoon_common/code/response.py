@@ -1,5 +1,5 @@
 """ 返回码模块."""
-from .base import BaseCode
+from lesoon_common.code.base import BaseCode
 
 
 class ResponseCode(BaseCode):

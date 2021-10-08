@@ -6,18 +6,18 @@ from functools import wraps
 from flask import Blueprint
 from flask import Flask
 from flask.wrappers import ResponseBase
-from flask_restful import unpack
+from flask_restful.utils import unpack
 
-from .dataclass.resource import ImportData
-from .exceptions import RequestError
-from .resource import BaseResource
-from .resource import LesoonResource
-from .response import ResponseCode
-from .response import success_response
-from .utils.jwt import jwt_required
-from .utils.req import Param
-from .utils.req import request_param
-from .utils.str import udlcase
+from lesoon_common.dataclass.resource import ImportData
+from lesoon_common.exceptions import RequestError
+from lesoon_common.resource import BaseResource
+from lesoon_common.resource import LesoonResource
+from lesoon_common.response import ResponseCode
+from lesoon_common.response import success_response
+from lesoon_common.utils.jwt import jwt_required
+from lesoon_common.utils.req import Param
+from lesoon_common.utils.req import request_param
+from lesoon_common.utils.str import udlcase
 
 
 def route(rule: str,
@@ -129,12 +129,12 @@ class BaseView:
 
             representations = cls.representations or OrderedDict()
 
-            mediatype = request.accept_mimetypes.best_match(representations,
-                                                            default=None)
-            if mediatype in representations:
+            media_type = request.accept_mimetypes.best_match(representations,
+                                                             default=None)
+            if media_type in representations:
                 data, code, headers = unpack(resp)
-                resp = representations[mediatype](data, code, headers)
-                resp.headers["Content-Type"] = mediatype
+                resp = representations[media_type](data, code, headers)
+                resp.headers["Content-Type"] = media_type
                 return resp
 
             return resp

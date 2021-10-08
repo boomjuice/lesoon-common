@@ -1,7 +1,7 @@
 """ 响应体模块. """
 import typing as t
 
-from .code import ResponseCode
+from lesoon_common.code import ResponseCode
 
 
 class Response:

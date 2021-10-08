@@ -8,26 +8,29 @@ from flask_restful import Resource
 from flask_sqlalchemy import Model
 from werkzeug.exceptions import BadRequestKeyError
 
-from .dataclass.resource import ImportData
-from .dataclass.resource import ImportParseResult
-from .exceptions import ResourceAttrError
-from .exceptions import ServiceError
-from .extensions import db
-from .globals import request
-from .model.base import BaseCompanyModel
-from .model.base import BaseModel
-from .model.schema import SqlaCamelSchema
-from .parse.sqla import parse_attribute_name
-from .response import error_response
-from .response import success_response
-from .utils.jwt import jwt_required
-from .utils.resource import parse_import_data
-from .utils.str import udlcase
-from .wrappers import LesoonQuery
+from lesoon_common.dataclass.resource import ImportData
+from lesoon_common.dataclass.resource import ImportParseResult
+from lesoon_common.exceptions import ResourceAttrError
+from lesoon_common.exceptions import ServiceError
+from lesoon_common.extensions import db
+from lesoon_common.globals import request
+from lesoon_common.model.base import BaseCompanyModel
+from lesoon_common.model.base import BaseModel
+from lesoon_common.model.schema import SqlaCamelSchema
+from lesoon_common.parse.sqla import parse_attribute_name
+from lesoon_common.response import error_response
+from lesoon_common.response import success_response
+from lesoon_common.utils.jwt import jwt_required
+from lesoon_common.utils.resource import parse_import_data
+from lesoon_common.utils.str import udlcase
+from lesoon_common.wrappers import LesoonQuery
 
 
 class BaseResource(Resource):
+    """ 通用增删改查基类."""
+    # 资源的Model对象
     __model__: t.Type[BaseModel] = None  # type:ignore
+    # 资源的Schema对象
     __schema__: t.Type[SqlaCamelSchema] = None  # type:ignore
 
     @classmethod
@@ -46,13 +49,17 @@ class BaseResource(Resource):
 
     @classmethod
     def select_filter(cls) -> LesoonQuery:
-        """通用查询query."""
+        """
+        通用单表查询query对象.
+        """
         query = cls.__model__.query  # type:ignore[attr-defined]
         return query.with_request_condition()
 
     @classmethod
     def page_get(cls) -> t.Tuple[t.Any, int]:
-        """通用分页查询."""
+        """
+        通用分页查询.
+        """
         query: LesoonQuery = cls.select_filter()
         page_query = query.paginate()
 
@@ -61,29 +68,58 @@ class BaseResource(Resource):
 
     @classmethod
     def before_create_one(cls, data: dict):
-        """新增前操作."""
+        """
+        新增前操作.
+        Args:
+             data: `cls.__model__`对应的字典
+
+        """
         pass
 
     @classmethod
     def _create_one(cls, data: dict):
-        """新增单条资源."""
+        """
+        新增单条资源.
+        Args:
+            data: `cls.__model__`对应的字典
+
+        Returns:
+            _obj: `cls.__model__`实例对象
+        """
         _obj = cls.get_schema().load(data)
         db.session.add(_obj)
         return _obj
 
     @classmethod
     def after_create_one(cls, data: dict, _obj: BaseModel):
-        """新增后操作."""
+        """
+        新增后操作.
+        Args:
+             data: `cls.__model__`对应的字典
+             _obj: `cls.__model__`实例对象
+        """
         pass
 
     @classmethod
     def before_create_many(cls, data_list: t.List[dict]):
-        """批量新增前操作."""
+        """
+        批量新增前操作.
+        Args:
+            data_list: `cls.__model__`对应的字典列表
+
+        """
         pass
 
     @classmethod
     def _create_many(cls, data_list: t.List[dict]):
-        """批量新增资源."""
+        """
+        批量新增资源.
+        Args:
+            data_list: `cls.__model__`对应的字典列表
+
+        Returns:
+            _objs: `cls.__model__`实例对象列表
+        """
         _objs = cls.get_schema().load(data_list, many=True)
         db.session.bulk_save_objects(_objs)
         return _objs
@@ -91,11 +127,25 @@ class BaseResource(Resource):
     @classmethod
     def after_create_many(cls, data_list: t.List[dict],
                           _objs: t.List[BaseModel]):
-        """批量新增后操作."""
+        """
+        批量新增后操作.
+        Args:
+            data_list: `cls.__model__`对应的字典列表
+            _objs: `cls.__model__`实例对象列表
+
+        """
         pass
 
     @classmethod
     def create_one(cls, data: dict):
+        """
+           新增单条资源入口.
+        Args:
+            data: `cls.__model__`对应的字典
+
+        Returns:
+            _obj: `cls.__model__`实例对象
+        """
         cls.before_create_one(data)
         _obj = cls._create_one(data)
         cls.after_create_one(data, _obj)
@@ -103,6 +153,14 @@ class BaseResource(Resource):
 
     @classmethod
     def create_many(cls, data_list: t.List[dict]):
+        """
+           批量新增资源入口.
+        Args:
+            data_list: `cls.__model__`对应的字典列表
+
+        Returns:
+            _objs: `cls.__model__`实例对象列表
+        """
         cls.before_create_many(data_list)
         _objs = cls._create_many(data_list)
         cls.after_create_many(data_list, _objs)

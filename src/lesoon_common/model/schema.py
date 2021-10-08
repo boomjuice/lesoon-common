@@ -9,9 +9,9 @@ from marshmallow_sqlalchemy import SQLAlchemySchema
 from sqlalchemy.dialects import mysql
 from sqlalchemy.sql import sqltypes
 
-from . import fields
-from ..extensions import db
-from ..utils.str import camelcase
+from lesoon_common.extensions import db
+from lesoon_common.model import fields
+from lesoon_common.utils.str import camelcase
 
 
 class CustomModelConverter(ModelConverter):

@@ -9,19 +9,19 @@ from flask_restful import Api
 from sqlalchemy.exc import DatabaseError
 from werkzeug.exceptions import HTTPException
 
-from .code import PyMysqlCode
-from .exceptions import ServiceError
-from .extensions import ca
-from .extensions import db
-from .extensions import jwt
-from .extensions import ma
-from .extensions import toolbar
-from .resource import LesoonResource
-from .resource import LesoonResourceItem
-from .response import error_response
-from .utils.str import camelcase
-from .view import LesoonView
-from .wrappers import LesoonRequest
+from lesoon_common.code import PyMysqlCode
+from lesoon_common.exceptions import ServiceError
+from lesoon_common.extensions import ca
+from lesoon_common.extensions import db
+from lesoon_common.extensions import jwt
+from lesoon_common.extensions import ma
+from lesoon_common.extensions import toolbar
+from lesoon_common.resource import LesoonResource
+from lesoon_common.resource import LesoonResourceItem
+from lesoon_common.response import error_response
+from lesoon_common.utils.str import camelcase
+from lesoon_common.view import LesoonView
+from lesoon_common.wrappers import LesoonRequest
 
 sqlalchemy_codes = {"pymysql": PyMysqlCode}
 

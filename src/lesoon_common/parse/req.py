@@ -4,7 +4,7 @@ import re
 import typing as t
 from urllib import parse
 
-from ..exceptions import ParseError
+from lesoon_common.exceptions import ParseError
 
 
 def extract_where_arg(where: t.Optional[str] = None) -> t.Dict[str, str]:

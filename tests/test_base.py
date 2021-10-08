@@ -1,9 +1,9 @@
 import pytest
+from tests.api import api
+from tests.api import bp
+from tests.api import UserResource
 from werkzeug.exceptions import MethodNotAllowed
 
-from .api import api
-from .api import bp
-from .api import UserResource
 from lesoon_common.base import handle_exception
 from lesoon_common.base import LesoonFlask
 from lesoon_common.exceptions import ServiceError

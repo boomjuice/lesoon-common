@@ -1,4 +1,5 @@
-from .api import UserResource
+from tests.api import UserResource
+
 from lesoon_common.utils.base import random_alpha_numeric
 
 

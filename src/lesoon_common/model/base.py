@@ -8,8 +8,8 @@ from sqlalchemy.sql.schema import Column
 from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 
-from ..extensions import db
-from ..globals import request
+from lesoon_common.extensions import db
+from lesoon_common.globals import request
 
 Model = db.Model
 

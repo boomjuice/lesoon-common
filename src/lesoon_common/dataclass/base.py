@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import marshmallow as ma
 
-from ..model import fields
-from ..model.schema import CamelSchema
+from lesoon_common.model import fields
+from lesoon_common.model.schema import CamelSchema
 
 
 @dataclass

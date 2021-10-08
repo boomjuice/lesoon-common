@@ -6,12 +6,12 @@ import typing as t
 from flask_sqlalchemy import Model
 from marshmallow.utils import from_iso_datetime
 
-from ..dataclass.resource import ImportData
-from ..dataclass.resource import ImportParseResult
-from ..exceptions import ServiceError
-from ..parse.sqla import parse_attribute_name
-from ..response import ResponseCode
-from ..utils.str import udlcase
+from lesoon_common.dataclass.resource import ImportData
+from lesoon_common.dataclass.resource import ImportParseResult
+from lesoon_common.exceptions import ServiceError
+from lesoon_common.parse.sqla import parse_attribute_name
+from lesoon_common.response import ResponseCode
+from lesoon_common.utils.str import udlcase
 
 log = logging.getLogger(__name__)
 

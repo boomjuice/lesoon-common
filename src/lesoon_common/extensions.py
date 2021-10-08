@@ -7,9 +7,9 @@ from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
 from sentry_sdk.integrations.flask import FlaskIntegration
 
-from .wrappers import LesoonDebugTool
-from .wrappers import LesoonJwt
-from .wrappers import LesoonQuery
+from lesoon_common.wrappers import LesoonDebugTool
+from lesoon_common.wrappers import LesoonJwt
+from lesoon_common.wrappers import LesoonQuery
 
 db = SQLAlchemy(query_class=LesoonQuery)
 ma = Marshmallow()

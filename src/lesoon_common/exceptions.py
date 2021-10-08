@@ -1,7 +1,7 @@
 """ 异常模块."""
 import typing as t
 
-from .response import ResponseCode
+from lesoon_common.response import ResponseCode
 
 
 class ParseError(Exception):

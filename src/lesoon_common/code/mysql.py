@@ -1,4 +1,4 @@
-from .base import BaseCode
+from lesoon_common.code.base import BaseCode
 
 
 class PyMysqlCode(BaseCode):

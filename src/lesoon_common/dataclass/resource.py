@@ -5,8 +5,8 @@ from dataclasses import field
 import marshmallow as ma
 from flask_sqlalchemy import Model
 
-from ..model import fields
-from ..model.schema import CamelSchema
+from lesoon_common.model import fields
+from lesoon_common.model.schema import CamelSchema
 
 
 @dataclass
