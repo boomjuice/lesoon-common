@@ -16,9 +16,8 @@ from ..utils.str import udlcase
 log = logging.getLogger(__name__)
 
 
-def parse_import_data(
-    import_data: ImportData, model: t.Type[Model]
-) -> ImportParseResult:
+def parse_import_data(import_data: ImportData,
+                      model: t.Type[Model]) -> ImportParseResult:
     """
     解析导入数据,将其转换为对应的模型, 并记录转换过程中的异常
     :param import_data:  导入数据类
@@ -58,8 +57,7 @@ def parse_import_data(
                 obj.excel_col_pos = chr(65 + cid)
                 excel_position = (
                     f"Excel [{obj.excel_row_pos}行,{obj.excel_col_pos}列]"
-                    f"{attr.name}:{col_value}"
-                )
+                    f"{attr.name}:{col_value}")
 
                 # 值为空
                 if not bool(col_value):
@@ -89,7 +87,8 @@ def parse_import_data(
                     try:
                         col_value = from_iso_datetime(col_value)
                     except ValueError:
-                        parse_err_list.append(excel_position + "日期格式无法解析,需遵循ISO8601标准")
+                        parse_err_list.append(excel_position +
+                                              "日期格式无法解析,需遵循ISO8601标准")
                         flag = False
                         break
 
@@ -105,8 +104,7 @@ def parse_import_data(
                 if union_key_value in union_key_value_set:
                     parse_err_list.append(
                         f"Excel [{rid + import_data.import_start_index}行,] "
-                        f"违反唯一约束[{import_data.union_key_name}]"
-                    )
+                        f"违反唯一约束[{import_data.union_key_name}]")
                     flag = False
                     continue
                 else:
@@ -119,5 +117,6 @@ def parse_import_data(
         raise ServiceError(ResponseCode.Error, f"导入数据异常:{e}")
 
     log.info(f"解析成功的行数为:{len(obj_list)}")
-    import_parse_result = ImportParseResult(obj_list, parse_err_list, insert_err_list)
+    import_parse_result = ImportParseResult(obj_list, parse_err_list,
+                                            insert_err_list)
     return import_parse_result

@@ -97,13 +97,17 @@ class LesoonFlask(Flask):
 
 
 class LesoonApi(Api):
-    def add_resource_item(self, resource: t.Type[LesoonResource], *urls, **kwargs):
+
+    def add_resource_item(self, resource: t.Type[LesoonResource], *urls,
+                          **kwargs):
         """注册资源项目."""
         # 生成resourceItem类
-        cls_attrs = {"__model__": resource.__model__, "__schema__": resource.__schema__}
+        cls_attrs = {
+            "__model__": resource.__model__,
+            "__schema__": resource.__schema__
+        }
         resource_item_cls: t.Type[LesoonResourceItem] = type(
-            f"{resource}Item", (LesoonResourceItem,), cls_attrs
-        )
+            f"{resource}Item", (LesoonResourceItem,), cls_attrs)
         ri_cls = resource.item_cls = resource_item_cls
 
         # 生成resourceItem 路由参数
@@ -114,7 +118,8 @@ class LesoonApi(Api):
         item_urls = [url + url_suffix for url in urls]
         self.add_resource(resource.item_cls, *item_urls, **kwargs)
 
-    def register_resource(self, resource: t.Type[LesoonResource], *urls, **kwargs):
+    def register_resource(self, resource: t.Type[LesoonResource], *urls,
+                          **kwargs):
         """注册资源.
         如果资源设置item_lookup,默认为True,则会追加注册item资源
         """

@@ -30,5 +30,5 @@ def random_alpha(size: int) -> str:
 
 def random_alpha_numeric(size: int) -> str:
     return "".join(
-        _random_char_list(size=size, char_set=string.digits + string.ascii_letters)
-    )
+        _random_char_list(size=size,
+                          char_set=string.digits + string.ascii_letters))

@@ -33,8 +33,7 @@ def get_token():
     if token is None:
         raise RuntimeError(
             "You must call `@jwt_required()` or `verify_jwt_in_request()` "
-            "before using this method"
-        )
+            "before using this method")
     return token
 
 
@@ -62,12 +61,15 @@ def create_system_token():
         "type": "access",
         "sub": str(user.id),
     }
-    return jwe.encrypt(
-        jwt.encode(token_data, secret_key), key=secret_key, cty="JWT"
-    ).decode()
+    return jwe.encrypt(jwt.encode(token_data, secret_key),
+                       key=secret_key,
+                       cty="JWT").decode()
 
 
-def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=None):
+def verify_jwt_in_request(optional=False,
+                          fresh=False,
+                          refresh=False,
+                          locations=None):
     """
     Verify that a valid JWT is present in the request, unless ``optional=True`` in
     which case no JWT is also considered valid.
@@ -94,8 +96,7 @@ def verify_jwt_in_request(optional=False, fresh=False, refresh=False, locations=
 
     try:
         orignal_token, jwt_data, jwt_header, jwt_location = _decode_jwt_from_request(
-            locations, fresh, refresh=refresh
-        )
+            locations, fresh, refresh=refresh)
     except NoAuthorizationError:
         if not optional:
             raise
@@ -145,6 +146,7 @@ def jwt_required(optional=False, fresh=False, refresh=False, locations=None):
     """
 
     def wrapper(fn):
+
         @wraps(fn)
         def decorator(*args, **kwargs):
             verify_jwt_in_request(optional, fresh, refresh, locations)
@@ -170,18 +172,16 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     for location in locations:
         if location == "cookies":
             get_encoded_token_functions.append(
-                (location, lambda: _decode_jwt_from_cookies(refresh))
-            )
+                (location, lambda: _decode_jwt_from_cookies(refresh)))
         elif location == "query_string":
             get_encoded_token_functions.append(
-                (location, _decode_jwt_from_query_string)
-            )
+                (location, _decode_jwt_from_query_string))
         elif location == "headers":
-            get_encoded_token_functions.append((location, _decode_jwt_from_headers))
+            get_encoded_token_functions.append(
+                (location, _decode_jwt_from_headers))
         elif location == "json":
             get_encoded_token_functions.append(
-                (location, lambda: _decode_jwt_from_json(refresh))
-            )
+                (location, lambda: _decode_jwt_from_json(refresh)))
         else:
             raise RuntimeError(f"'{location}' is not a valid location")
 

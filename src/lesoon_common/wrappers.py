@@ -52,9 +52,9 @@ class LesoonRequest(Request):
 
     @cached_property
     def page_size(self):
-        page_size = self.args.get(
-            "pageSize", default=self.__class__.PAGE_SIZE_DEFAULT, type=int
-        )
+        page_size = self.args.get("pageSize",
+                                  default=self.__class__.PAGE_SIZE_DEFAULT,
+                                  type=int)
 
         if page_size < 0:
             page_size = self.__class__.PAGE_SIZE_DEFAULT
@@ -78,6 +78,7 @@ class LesoonRequest(Request):
 
 
 class LesoonQuery(BaseQuery):
+
     def paginate(
         self,
         if_page: t.Optional[bool] = None,
@@ -89,7 +90,7 @@ class LesoonQuery(BaseQuery):
         :param if_page: 是否分页
         :param page: 页码
         :param per_page: 页大小
-        :param max_per_page: 最大页大小
+        :param if_count: 是否进行count()计算总和
         """
         page = page or request.page  # type:ignore
         per_page = per_page or request.page_size  # type:ignore
@@ -107,10 +108,12 @@ class LesoonQuery(BaseQuery):
 
         return Pagination(self, page, per_page, total, items)
 
-    def with_request_condition(self, add_where: bool = True, add_sort: bool = True):
+    def with_request_condition(self,
+                               add_where: bool = True,
+                               add_sort: bool = True):
         """注入请求查询过滤条件.
         : 将请求参数转化成sqlalchemy语法,注入Query对象
-        : 注意 此方法依赖于Flask请求上下文
+        : 注意 此方法只能在Flask请求上下文中调用
         """
         if any([add_where, add_sort]):
             related_models = parse_related_models(self.statement)
@@ -127,6 +130,7 @@ class LesoonQuery(BaseQuery):
 
 
 class LesoonJwt(JWTManager):
+
     def __init__(self, app=None):
         super().__init__(app=app)
 
@@ -148,10 +152,12 @@ class LesoonJwt(JWTManager):
 
     @staticmethod
     def _set_default_configuration_options(app):
-        app.config.setdefault("JWT_ACCESS_TOKEN_EXPIRES", datetime.timedelta(days=30))
+        app.config.setdefault("JWT_ACCESS_TOKEN_EXPIRES",
+                              datetime.timedelta(days=30))
         app.config.setdefault("JWT_ACCESS_COOKIE_NAME", "access_token_cookie")
         app.config.setdefault("JWT_ACCESS_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_ACCESS_CSRF_COOKIE_NAME", "csrf_access_token")
+        app.config.setdefault("JWT_ACCESS_CSRF_COOKIE_NAME",
+                              "csrf_access_token")
         app.config.setdefault("JWT_ACCESS_CSRF_COOKIE_PATH", "/")
         app.config.setdefault("JWT_ACCESS_CSRF_FIELD_NAME", "csrf_token")
         app.config.setdefault("JWT_ACCESS_CSRF_HEADER_NAME", "X-CSRF-TOKEN")
@@ -162,7 +168,8 @@ class LesoonJwt(JWTManager):
         app.config.setdefault("JWT_COOKIE_SECURE", False)
         app.config.setdefault("JWT_CSRF_CHECK_FORM", False)
         app.config.setdefault("JWT_CSRF_IN_COOKIES", True)
-        app.config.setdefault("JWT_CSRF_METHODS", ["POST", "PUT", "PATCH", "DELETE"])
+        app.config.setdefault("JWT_CSRF_METHODS",
+                              ["POST", "PUT", "PATCH", "DELETE"])
         app.config.setdefault("JWT_DECODE_ALGORITHMS", None)
         app.config.setdefault("JWT_DECODE_AUDIENCE", None)
         app.config.setdefault("JWT_DECODE_ISSUER", None)
@@ -180,12 +187,14 @@ class LesoonJwt(JWTManager):
         app.config.setdefault("JWT_QUERY_STRING_VALUE_PREFIX", "")
         app.config.setdefault("JWT_REFRESH_COOKIE_NAME", "refresh_token_cookie")
         app.config.setdefault("JWT_REFRESH_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_REFRESH_CSRF_COOKIE_NAME", "csrf_refresh_token")
+        app.config.setdefault("JWT_REFRESH_CSRF_COOKIE_NAME",
+                              "csrf_refresh_token")
         app.config.setdefault("JWT_REFRESH_CSRF_COOKIE_PATH", "/")
         app.config.setdefault("JWT_REFRESH_CSRF_FIELD_NAME", "csrf_token")
         app.config.setdefault("JWT_REFRESH_CSRF_HEADER_NAME", "X-CSRF-TOKEN")
         app.config.setdefault("JWT_REFRESH_JSON_KEY", "refresh_token")
-        app.config.setdefault("JWT_REFRESH_TOKEN_EXPIRES", datetime.timedelta(days=30))
+        app.config.setdefault("JWT_REFRESH_TOKEN_EXPIRES",
+                              datetime.timedelta(days=30))
         app.config.setdefault("JWT_SECRET_KEY", None)
         app.config.setdefault("JWT_SESSION_COOKIE", True)
         app.config.setdefault("JWT_TOKEN_LOCATION", ("headers", "query_string"))
@@ -200,14 +209,15 @@ class LesoonJwt(JWTManager):
         expires_delta=None,
         headers=None,
     ):
-        jwt_token = super()._encode_jwt_from_config(
-            identity, token_type, claims, fresh, expires_delta, headers
-        )
+        jwt_token = super()._encode_jwt_from_config(identity, token_type,
+                                                    claims, fresh,
+                                                    expires_delta, headers)
         secret = current_app.config.get("JWT_SECRET_KEY")
         return jwe.encrypt(jwt_token, key=secret, cty="JWT").decode()
 
 
 class LesoonDebugTool(DebugToolbarExtension):
+
     def init_app(self, app):
         wrap_json = """
         <html>
@@ -228,7 +238,8 @@ class LesoonDebugTool(DebugToolbarExtension):
         """
 
         def json_to_html(response):
-            if response.mimetype == "application/json" and request.args.get("_debug"):
+            if response.mimetype == "application/json" and request.args.get(
+                    "_debug"):
                 html_wrapped_response = make_response(
                     render_template_string(
                         wrap_json,

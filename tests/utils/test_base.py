@@ -4,6 +4,7 @@ from lesoon_common.utils.base import generate_id
 
 
 class TestStrUtil:
+
     def test_generate_id_invalid(self):
         with pytest.raises(ValueError):
             generate_id(10)

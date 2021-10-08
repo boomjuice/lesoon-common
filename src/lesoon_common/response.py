@@ -5,6 +5,7 @@ from .code import ResponseCode
 
 
 class Response:
+
     @classmethod
     def load(cls, data: dict):
         response = cls(code=ResponseCode.Success)
@@ -73,9 +74,8 @@ def success_response(result: t.Any = None, **kwargs) -> dict:
     return resp.to_dict()
 
 
-def error_response(
-    code: t.Union[ResponseCode, str] = ResponseCode.Error, **kwargs
-) -> dict:
+def error_response(code: t.Union[ResponseCode, str] = ResponseCode.Error,
+                   **kwargs) -> dict:
     if isinstance(code, str):
         if ResponseCode.is_exist(code):
             code = ResponseCode(code)  # type:ignore[call-arg]

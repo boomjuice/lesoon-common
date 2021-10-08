@@ -5,6 +5,7 @@ from lesoon_common.utils.str import udlcase
 
 
 class TestStrUtil:
+
     def test_camelcase_empty(self):
         assert camelcase("") == ""
 

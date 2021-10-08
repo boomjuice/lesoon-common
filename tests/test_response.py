@@ -5,10 +5,16 @@ from lesoon_common.response import success_response
 
 
 class TestResponse:
+
     def test_load(self):
         resp_dict = {
-            "flag": {"retCode": "1234", "retMsg": "test"},
-            "data": {"a": 1},
+            "flag": {
+                "retCode": "1234",
+                "retMsg": "test"
+            },
+            "data": {
+                "a": 1
+            },
             "total": 1,
         }
         resp = Response.load(resp_dict)
@@ -18,6 +24,7 @@ class TestResponse:
 
 
 class TestResponseUtils:
+
     def test_success_response_null(self):
         expected_resp = Response(code=ResponseCode.Success)
         r = success_response()

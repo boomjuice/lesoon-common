@@ -2,6 +2,7 @@
 
 
 class TestMixin:
+
     def assertEqual(self, left, right):
         assert left == right
 

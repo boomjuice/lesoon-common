@@ -20,7 +20,9 @@ from .utils.req import request_param
 from .utils.str import udlcase
 
 
-def route(rule: str, skip_decorator: bool = False, **options: t.Any) -> t.Callable:
+def route(rule: str,
+          skip_decorator: bool = False,
+          **options: t.Any) -> t.Callable:
     """一个用于标示路由的装饰器,使用在BaseView的实例方法中，
     与 `@app.route`使用相同
     """
@@ -38,8 +40,7 @@ def get_route_members(base_cls, cls):
     base_members = dir(base_cls)
     all_members = inspect.getmembers(cls, predicate=inspect.isfunction)
     return [
-        member
-        for member in all_members
+        member for member in all_members
         if member[0] not in base_members and hasattr(member[1], "_rule_cache")
     ]
 
@@ -54,14 +55,12 @@ class BaseView:
     method_decorators: t.List[t.Callable] = []
 
     @classmethod
-    def register(
-        cls,
-        app: t.Union[Flask, Blueprint],
-        url: t.Optional[str] = None,
-        endpoint: t.Optional[str] = None,
-        base_cls=None,
-        **rule_options
-    ):
+    def register(cls,
+                 app: t.Union[Flask, Blueprint],
+                 url: t.Optional[str] = None,
+                 endpoint: t.Optional[str] = None,
+                 base_cls=None,
+                 **rule_options):
         """
         app = Flask()
         class UserView(BaseView):
@@ -80,18 +79,19 @@ class BaseView:
         # 获取需要路由的方法
         members = get_route_members(base_cls, cls)
 
-        bp = Blueprint(
-            name=endpoint or udlcase(cls.__name__), import_name=__name__, url_prefix=url
-        )
+        bp = Blueprint(name=endpoint or udlcase(cls.__name__),
+                       import_name=__name__,
+                       url_prefix=url)
 
         for name, func in members:
             rule, options = func._rule_cache
             view_func = cls.make_view_func(name, func.skip_decorator)
             func_endpoint = options.pop("endpoint", None)
 
-            bp.add_url_rule(
-                rule=rule, endpoint=func_endpoint, view_func=view_func, **options
-            )
+            bp.add_url_rule(rule=rule,
+                            endpoint=func_endpoint,
+                            view_func=view_func,
+                            **options)
 
         app.register_blueprint(bp)
 
@@ -104,6 +104,7 @@ class BaseView:
         view = getattr(instance, name)
 
         def make_func(fn):
+
             @wraps(fn)
             def decorator(*args, **kwargs):
                 return fn(*args, **kwargs)
@@ -128,9 +129,8 @@ class BaseView:
 
             representations = cls.representations or OrderedDict()
 
-            mediatype = request.accept_mimetypes.best_match(
-                representations, default=None
-            )
+            mediatype = request.accept_mimetypes.best_match(representations,
+                                                            default=None)
             if mediatype in representations:
                 data, code, headers = unpack(resp)
                 resp = representations[mediatype](data, code, headers)
@@ -148,14 +148,13 @@ class LesoonView(BaseView):
     method_decorators = [jwt_required()]
 
     @route("/save", methods=["POST"])
-    @request_param(
-        {
-            "insert_rows": Param(key="insertRows", loc="body", data_type=list),
-            "update_rows": Param(key="updateRows", loc="body", data_type=list),
-            "delete_rows": Param(key="deleteRows", loc="body", data_type=list),
-        }
-    )
-    def union_operate(self, insert_rows: list, update_rows: list, delete_rows: list):
+    @request_param({
+        "insert_rows": Param(key="insertRows", loc="body", data_type=list),
+        "update_rows": Param(key="updateRows", loc="body", data_type=list),
+        "delete_rows": Param(key="deleteRows", loc="body", data_type=list),
+    })
+    def union_operate(self, insert_rows: list, update_rows: list,
+                      delete_rows: list):
         """增删改合并操作."""
         self.resource.union_operate(insert_rows, update_rows, delete_rows)
         return success_response()

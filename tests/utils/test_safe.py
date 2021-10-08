@@ -16,7 +16,9 @@ class TestSafeUtil:
             aes_cbc_decrpyt(self.AES_KEY, 123456)
 
     def test_aes_encrypt(self):
-        assert aes_cbc_encrpyt(self.AES_KEY, "123456") == "RO/nYDZmG6cEspG6D6gMog=="
+        assert aes_cbc_encrpyt(self.AES_KEY,
+                               "123456") == "RO/nYDZmG6cEspG6D6gMog=="
 
     def test_aes_decrypt(self):
-        assert aes_cbc_decrpyt(self.AES_KEY, "RO/nYDZmG6cEspG6D6gMog==") == "123456"
+        assert aes_cbc_decrpyt(self.AES_KEY,
+                               "RO/nYDZmG6cEspG6D6gMog==") == "123456"

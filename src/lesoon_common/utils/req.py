@@ -53,13 +53,9 @@ class Param:
 
     def __eq__(self, other):
         # 单元测试需要
-        return (
-            self.key == other.key
-            and self.default == other.default
-            and self.data_type == other.data_type
-            and self.deserialize == self.deserialize
-            and self.loc == other.loc
-        )
+        return (self.key == other.key and self.default == other.default and
+                self.data_type == other.data_type and
+                self.deserialize == self.deserialize and self.loc == other.loc)
 
 
 def _get_request_param(param: Param) -> t.Any:

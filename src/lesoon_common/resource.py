@@ -89,7 +89,8 @@ class BaseResource(Resource):
         return _objs
 
     @classmethod
-    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
+    def after_create_many(cls, data_list: t.List[dict],
+                          _objs: t.List[BaseModel]):
         """批量新增后操作."""
         pass
 
@@ -124,7 +125,8 @@ class BaseResource(Resource):
     def update_one(cls, data: dict):
         """更新单条资源."""
         _obj = cls.get_schema().load(data, partial=True)
-        _q = cls.__model__.query.get(data.get("id"))  # type:ignore[attr-defined]
+        _q = cls.__model__.query.get(
+            data.get("id"))  # type:ignore[attr-defined]
         if not _q:
             _obj = None
         else:
@@ -158,9 +160,8 @@ class BaseResource(Resource):
     @classmethod
     def _remove_many(cls, ids: t.List[str]):
         """批量删除."""
-        cls.__model__.query.filter(cls.__model__.id.in_(ids)).delete(
-            synchronize_session=False
-        )
+        cls.__model__.query.filter(
+            cls.__model__.id.in_(ids)).delete(synchronize_session=False)
 
     @classmethod
     def after_remove_many(cls, ids: t.List[str]):
@@ -207,7 +208,8 @@ class LesoonResourceType(MethodViewType):
                 raise ResourceAttrError(f"{name}未定义 __schema__属性")
 
             if not issubclass(schema, SqlaCamelSchema):
-                raise ResourceAttrError(f"{name}:{schema} 不是期望的类型:{SqlaCamelSchema}")
+                raise ResourceAttrError(
+                    f"{name}:{schema} 不是期望的类型:{SqlaCamelSchema}")
 
 
 class LesoonResourceItem(BaseResource):
@@ -266,7 +268,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         return success_response(msg="删除成功")
 
     @classmethod
-    def union_operate(cls, insert_rows: list, update_rows: list, delete_rows: list):
+    def union_operate(cls, insert_rows: list, update_rows: list,
+                      delete_rows: list):
         """新增，更新，删除的联合操作."""
         cls.create_many(insert_rows)
         cls.update_many(update_rows)
@@ -288,20 +291,18 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             attr = parse_attribute_name(key, cls.__model__)
             union_filter.append(attr.__eq__(getattr(obj, udlcase(key))))
 
-        if len(union_filter) and cls.__model__.query.filter(*union_filter).count():
-            msg_detail = (
-                f"Excel [{obj.excel_row_pos}行,] "
-                f"根据约束[{import_data.union_key_name}]数据已存在"
-            )
+        if len(union_filter) and cls.__model__.query.filter(
+                *union_filter).count():
+            msg_detail = (f"Excel [{obj.excel_row_pos}行,] "
+                          f"根据约束[{import_data.union_key_name}]数据已存在")
             if import_data.validate_all:
                 obj.error = msg_detail
             else:
                 raise ServiceError(msg=msg_detail)
 
     @classmethod
-    def import_data_process(
-        cls, import_data: ImportData, import_parse_result: ImportParseResult
-    ):
+    def import_data_process(cls, import_data: ImportData,
+                            import_parse_result: ImportParseResult):
         """导入操作写库逻辑."""
         _objs = list()
         for obj in import_parse_result.obj_list:
@@ -321,11 +322,11 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         cls.before_import_data(import_data)
 
         import_parse_result: ImportParseResult = parse_import_data(
-            import_data, cls.__model__
-        )
+            import_data, cls.__model__)
 
         if import_parse_result.parse_err_list:
-            msg_detail = "数据异常<br/>" + "<br/>".join(import_parse_result.parse_err_list)
+            msg_detail = "数据异常<br/>" + "<br/>".join(
+                import_parse_result.parse_err_list)
             return error_response(msg="导入异常,请根据错误信息检查数据", msg_detail=msg_detail)
 
         if not import_parse_result.obj_list:
@@ -346,8 +347,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             )
         else:
             return success_response(
-                msg=f"导入成功: 成功条数[{len(import_parse_result.obj_list)}]"
-            )
+                msg=f"导入成功: 成功条数[{len(import_parse_result.obj_list)}]")
 
     @classmethod
     def after_import_data(cls, import_data: ImportData):
@@ -376,7 +376,8 @@ class SaasResource(LesoonResource):
         return super()._create_many(data_list=data_list)
 
     @classmethod
-    def before_import_insert_one(cls, obj: BaseCompanyModel, import_data: ImportData):
+    def before_import_insert_one(cls, obj: BaseCompanyModel,
+                                 import_data: ImportData):
         # 过滤条件以及唯一约束都要加上companyId做验证
         obj.company_id = request.user.company_id
         super().before_import_insert_one(obj, import_data)

@@ -25,8 +25,9 @@ SqlaExpList = t.List[SqlaExp]
 
 
 def parse_multi_condition(
-    where: dict, sort_list: list, models: t.List[t.Union[Table, Alias]]
-) -> t.Tuple[SqlaExpList, SqlaExpList]:
+        where: dict, sort_list: list,
+        models: t.List[t.Union[Table,
+                               Alias]]) -> t.Tuple[SqlaExpList, SqlaExpList]:
     """多表过滤条件解析."""
     filter_list = list()
     order_list = list()
@@ -149,7 +150,9 @@ class LikeOpParser(SqlaOpParser):
 
 
 class OpParserFactory:
-    parser_set: t.Set[t.Type[SqlaOpParser]] = {CmpOpParser, LikeOpParser, InOpParser}
+    parser_set: t.Set[t.Type[SqlaOpParser]] = {
+        CmpOpParser, LikeOpParser, InOpParser
+    }
 
     @classmethod
     def create(
@@ -191,9 +194,8 @@ def parse_prefix_alias(name: str, model: t.Type[Model]) -> t.Optional[str]:
         return name
 
 
-def parse_suffix_operation(
-    column: str, value: t.Union[int, str, t.List[t.Any]], model: t.Type[Model]
-) -> t.Optional[SqlaExp]:
+def parse_suffix_operation(column: str, value: t.Union[int, str, t.List[t.Any]],
+                           model: t.Type[Model]) -> t.Optional[SqlaExp]:
     if m := re.match(r"(?P<col>[\w\\.]+)_(?P<op>[\w]+)", column):
         col, op = m.group("col"), m.group("op")
         attr = parse_attribute_name(col, model)
@@ -206,8 +208,8 @@ def parse_suffix_operation(
 
 
 def parse_attribute_name(
-    name: str, model: t.Type[Model]
-) -> t.Union[Column, InstrumentedAttribute]:
+        name: str,
+        model: t.Type[Model]) -> t.Union[Column, InstrumentedAttribute]:
     """根据 model,name获取模型的字段对象.
     :param model: sqlalchemy.Model
     :param name: 字段名
@@ -226,9 +228,8 @@ def parse_related_models(statement: Select) -> t.List[t.Union[Table, Alias]]:
 
     # 递归查找涉及表实体
     # 注意: 未包含子查询以及with语句涉及的表情况
-    def recur_realted_models(
-        _froms: t.List[t.Any], related_models: t.List[t.Union[Table, Alias]]
-    ):
+    def recur_realted_models(_froms: t.List[t.Any],
+                             related_models: t.List[t.Union[Table, Alias]]):
         for _from in _froms:
             if isinstance(_from, (Table, Alias)):
                 # 表实体

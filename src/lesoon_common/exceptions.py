@@ -27,9 +27,9 @@ class ServiceError(Exception):
 
     CODE = ResponseCode.Error
 
-    def __init__(
-        self, code: t.Optional[ResponseCode] = None, msg: t.Optional[str] = None
-    ):
+    def __init__(self,
+                 code: t.Optional[ResponseCode] = None,
+                 msg: t.Optional[str] = None):
         super().__init__()
         self.code = code or self.__class__.CODE
         self.msg = msg or self.code.msg

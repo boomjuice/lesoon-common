@@ -41,6 +41,7 @@ class UserSchema(SqlaCamelAutoSchema):
 
 
 class UserExtSchema(SqlaCamelAutoSchema):
+
     class Meta(SqlaCamelAutoSchema.Meta):
         model = UserExt
         exclude = ["create_time"]

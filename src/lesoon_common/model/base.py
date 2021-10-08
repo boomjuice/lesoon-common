@@ -31,9 +31,10 @@ class CompanyMixin:
 
 
 class StatusMixin:
-    status = Column(
-        TINYINT, nullable=False, server_default=text("'1'"), comment="状态 0-禁用 1-启用"
-    )
+    status = Column(TINYINT,
+                    nullable=False,
+                    server_default=text("'1'"),
+                    comment="状态 0-禁用 1-启用")
 
 
 class RemarkMixin:
@@ -64,7 +65,10 @@ class FixedOperatorMixin:
         comment="修改人",
         onupdate=lambda: request.user.user_name,
     )
-    modify_time = Column(DateTime, nullable=True, comment="修改时间", onupdate=datetime.now)
+    modify_time = Column(DateTime,
+                         nullable=True,
+                         comment="修改时间",
+                         onupdate=datetime.now)
     update_time = Column(
         DateTime,
         server_default=text("CURRENT_TIMESTAMP"),

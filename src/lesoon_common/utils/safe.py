@@ -44,7 +44,8 @@ def aes_cbc_encrpyt(key: str, _input: str) -> str:
     key_bytes = key.encode()
     input_bytes = _input.encode()
 
-    cipher = Cipher(algorithm=algorithms.AES(key_bytes), mode=modes.CBC(key_bytes[:16]))
+    cipher = Cipher(algorithm=algorithms.AES(key_bytes),
+                    mode=modes.CBC(key_bytes[:16]))
 
     padder = padding.PKCS7(algorithms.AES.block_size).padder()
     padded_input = padder.update(input_bytes) + padder.finalize()
@@ -62,7 +63,8 @@ def aes_cbc_decrpyt(key: str, _input: str) -> str:
     key_bytes = key.encode()
     input_bytes = base64.b64decode(_input.encode())
 
-    cipher = Cipher(algorithm=algorithms.AES(key_bytes), mode=modes.CBC(key_bytes[:16]))
+    cipher = Cipher(algorithm=algorithms.AES(key_bytes),
+                    mode=modes.CBC(key_bytes[:16]))
 
     decryptor = cipher.decryptor()
     dncrpyted_input = decryptor.update(input_bytes) + decryptor.finalize()

@@ -18,7 +18,8 @@ jwt = LesoonJwt()
 toolbar = LesoonDebugTool()
 
 sentry_sdk.init(
-    dsn="https://86c4b80dff6c45739262a6908a3e17a1@o877412.ingest.sentry.io/5828006",
+    dsn=
+    "https://86c4b80dff6c45739262a6908a3e17a1@o877412.ingest.sentry.io/5828006",
     integrations=[FlaskIntegration()],
     traces_sample_rate=1.0,
 )

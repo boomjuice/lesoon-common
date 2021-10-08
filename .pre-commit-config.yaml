@@ -10,17 +10,11 @@ repos:
       - id: reorder-python-imports
         name: Reorder Python imports (src, tests)
         args: [ "--application-directories", "src" ]
-  - repo: https://github.com/psf/black # 代码格式化
-    rev: 21.5b1
+  - repo: https://github.com/pre-commit/mirrors-yapf # 代码风格
+    rev: v0.31.0
     hooks:
-      - id: black
-  - repo: https://github.com/PyCQA/flake8 # 代码风格检查
-    rev: 3.9.2
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-bugbear
-          - flake8-implicit-str-concat
+      - id: yapf
+        name: Uniform Code Style
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:

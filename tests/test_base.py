@@ -12,6 +12,7 @@ from lesoon_common.response import ResponseCode
 
 
 class ExtMock:
+
     def __init__(self):
         self.init = False
 
@@ -20,6 +21,7 @@ class ExtMock:
 
 
 class TestAppHandler:
+
     def test_handle_http_exception(self, app):
         expected_error = MethodNotAllowed()
         r = handle_exception(expected_error)
@@ -30,13 +32,15 @@ class TestAppHandler:
         assert r.code == str(ResponseCode.Error.code)
 
     def test_handle_service_exception(self, app):
-        r = handle_exception(ServiceError(code=ResponseCode.Success, msg="test"))
+        r = handle_exception(ServiceError(code=ResponseCode.Success,
+                                          msg="test"))
         r = Response.load(r)
         assert r.code == str(ResponseCode.Success.code)
         assert r.msg == "test"
 
 
 class TestLesoonFlask:
+
     def test_init_default_extensions(self):
         app = LesoonFlask(__name__)
         assert app.registered_extensions is LesoonFlask.default_extensions
@@ -52,6 +56,7 @@ class TestLesoonFlask:
 
 
 class TestLesoonApi:
+
     @pytest.fixture(autouse=True)
     def setup_method(self, app):
         api.register_resource(UserResource, "/User", endpoint="user")

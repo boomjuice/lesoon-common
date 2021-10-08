@@ -4,6 +4,7 @@ import enum
 
 @enum.unique
 class BaseCode(enum.Enum):
+
     @classmethod
     def is_exist(cls, code: str):
         return code in cls._value2member_map_  # type:ignore[operator]

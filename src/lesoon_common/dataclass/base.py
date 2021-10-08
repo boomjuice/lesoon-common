@@ -14,6 +14,8 @@ class TokenUser:
     id: int
     # 公司id
     company_id: int
+    # 公司名称
+    company_name: str
     # 组织id
     org_id: int
     # 登录名
@@ -63,6 +65,7 @@ class TokenUser:
         system_user = {
             "id": -1,
             "companyId": 1,
+            "companyName": "-",
             "orgId": 1,
             "loginName": "000000",
             "userName": "系统自动生成",
@@ -78,10 +81,11 @@ class TokenUser:
 class TokenUserSchema(CamelSchema):
     id = fields.Int()
     company_id = fields.Int()
+    company_name = fields.Str(missing="-")
     org_id = fields.Int()
     login_name = fields.Str()
     user_name = fields.Str()
-    user_id = fields.Int()
+    user_id = fields.Int(missing=1)
     email = fields.Str(allow_none=True)
     phone_number = fields.Str(allow_none=True)
     icon = fields.Str(allow_none=True)

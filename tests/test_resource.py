@@ -3,9 +3,11 @@ from lesoon_common.utils.base import random_alpha_numeric
 
 
 class TestLesoonResource:
+
     def test_page_get(self, db):
         users = self.generate_random_user(25)
-        db.session.bulk_insert_mappings(mapper=UserResource.__model__, mappings=users)
+        db.session.bulk_insert_mappings(mapper=UserResource.__model__,
+                                        mappings=users)
         res, total = UserResource.page_get()
         assert total == 25
         assert res == users
