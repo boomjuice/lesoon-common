@@ -1,3 +1,20 @@
+""" lesoonView 模块
+因为flask未提供类形式的路由方法,导致路由方法没有命名空间而结果混乱.
+本模块为实现自定义类路由而开发, 使路由方法都有自己的类命名空间,方便管理.
+
+Examples：
+    app = Flask()
+    api = LesoonApi(app)
+    class UserView(BaseView):
+
+        @route("/test",methods=["GET"])
+        def test(self):
+            return "test"
+
+    UserView.register(app, "/sysUser", endpoint = "sys_user")
+    or api.register_view(UserView, "/sysUser", endpoint="sys_user")
+"""
+
 import inspect
 import typing as t
 from collections import OrderedDict
@@ -66,7 +83,7 @@ class BaseView:
         class UserView(BaseView):
 
             @route("/test",methods=["GET"])
-            def test():
+            def test(self):
                 return "test"
 
         UserView.register(app, "/sysUser", endpoint = "sys_user")

@@ -1,4 +1,17 @@
-""" 响应体模块. """
+""" 响应体模块.
+该模块用于统一返回体结构.
+Examples:
+    {
+        "flag": {
+                "retCode": "0",
+                "retMsg": "操作成功",
+                "retDetail": "操作成功"
+                },
+        "data": {...},
+        "rows": [{},...],
+        "total": int
+    }
+"""
 import typing as t
 
 from lesoon_common.code import ResponseCode

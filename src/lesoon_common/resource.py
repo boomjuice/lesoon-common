@@ -108,7 +108,8 @@ class BaseResource(Resource):
             data_list: `cls.__model__`对应的字典列表
 
         """
-        pass
+        for data in data_list:
+            cls.before_create_one(data)
 
     @classmethod
     def _create_many(cls, data_list: t.List[dict]):
@@ -121,12 +122,11 @@ class BaseResource(Resource):
             _objs: `cls.__model__`实例对象列表
         """
         _objs = cls.get_schema().load(data_list, many=True)
-        db.session.bulk_save_objects(_objs)
+        db.session.add_all(_objs)
         return _objs
 
     @classmethod
-    def after_create_many(cls, data_list: t.List[dict],
-                          _objs: t.List[BaseModel]):
+    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
         """
         批量新增后操作.
         Args:
@@ -134,7 +134,8 @@ class BaseResource(Resource):
             _objs: `cls.__model__`实例对象列表
 
         """
-        pass
+        for data, obj in zip(data_list, _objs):
+            cls.after_create_one(data, obj)
 
     @classmethod
     def create_one(cls, data: dict):
@@ -349,8 +350,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             attr = parse_attribute_name(key, cls.__model__)
             union_filter.append(attr.__eq__(getattr(obj, udlcase(key))))
 
-        if len(union_filter) and cls.__model__.query.filter(
-                *union_filter).count():
+        if (len(union_filter) and
+            cls.__model__.query.filter(*union_filter).count()):
             msg_detail = (f"Excel [{obj.excel_row_pos}行,] "
                           f"根据约束[{import_data.union_key_name}]数据已存在")
             if import_data.validate_all:
@@ -359,8 +360,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
                 raise ServiceError(msg=msg_detail)
 
     @classmethod
-    def import_data_process(cls, import_data: ImportData,
-                            import_parse_result: ImportParseResult):
+    def process_import_data(cls, import_data: ImportData,
+                           import_parse_result: ImportParseResult):
         """导入操作写库逻辑."""
         _objs = list()
         for obj in import_parse_result.obj_list:
@@ -391,7 +392,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             msg_detail = "<br/>".join(import_parse_result.insert_err_list)
             return error_response(msg="未解析到数据", msg_detail=msg_detail)
 
-        cls.import_data_process(import_data, import_parse_result)
+        cls.process_import_data(import_data, import_parse_result)
 
         cls.after_import_data(import_data)
 
@@ -399,8 +400,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             msg_detail = " \n ".join(import_parse_result.insert_err_list)
             return error_response(
                 msg=f"导入结果: "
-                f"成功条数[{len(import_parse_result.obj_list)}] "
-                f"失败条数[{len(import_parse_result.insert_err_list)}]",
+                    f"成功条数[{len(import_parse_result.obj_list)}] "
+                    f"失败条数[{len(import_parse_result.insert_err_list)}]",
                 msg_detail=f"失败信息:{msg_detail}",
             )
         else:
@@ -414,6 +415,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
 
 class SaasResource(LesoonResource):
+    """ Saas相关资源与company_id绑定查询."""
     __model__: t.Type[BaseCompanyModel] = None  # type:ignore
 
     @classmethod
@@ -423,7 +425,6 @@ class SaasResource(LesoonResource):
 
     @classmethod
     def _create_one(cls, data: dict):
-        # saas相关company_id都需要
         data["companyId"] = data.get("companyId") or request.user.company_id
         return super()._create_one(data=data)
 

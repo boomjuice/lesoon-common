@@ -2,12 +2,14 @@
 import logging
 import sys
 import typing as t
+import time
 
 from flask import current_app
 from flask import Flask
 from flask_restful import Api
 from sqlalchemy.exc import DatabaseError
 from werkzeug.exceptions import HTTPException
+from jaeger_client import Config
 
 from lesoon_common.code import PyMysqlCode
 from lesoon_common.exceptions import ServiceError
@@ -16,6 +18,7 @@ from lesoon_common.extensions import db
 from lesoon_common.extensions import jwt
 from lesoon_common.extensions import ma
 from lesoon_common.extensions import toolbar
+from lesoon_common.extensions import hc
 from lesoon_common.resource import LesoonResource
 from lesoon_common.resource import LesoonResourceItem
 from lesoon_common.response import error_response
@@ -27,23 +30,39 @@ sqlalchemy_codes = {"pymysql": PyMysqlCode}
 
 
 def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
+    """
+    全局异常处理.
+    处理异常包括: http异常,
+                 服务抛出异常,
+                 client远程调用异常,
+                 sqlalchemy数据库层面异常,
+                 未知异常
+    Args:
+        error: 异常实例
+
+    """
     current_app.logger.exception(error)
     if isinstance(error, HTTPException):
+        # http异常
         return error
     elif isinstance(error, ServiceError):
+        # 服务异常
         return error_response(code=error.code, msg=error.msg)
     elif hasattr(error, "code") and hasattr(error, "msg"):
+        # 调用异常
         return error_response(code=error.code, msg=error.msg)  # type:ignore
     elif isinstance(error, DatabaseError):
+        # 数据库异常
         msg = errmsg = error._message()
-        err_package = error.orig.__module__.split(".", 1)[0]
+        err_pkg = error.orig.__module__.split(".", 1)[0]
         errcode = error.orig.args[0]
 
-        code_class = sqlalchemy_codes.get(err_package, None)
+        code_class = sqlalchemy_codes.get(err_pkg, None)
         if code_class and code_class.is_exist(errcode):
             msg = code_class(errcode).msg  # type:ignore[call-arg]
         return error_response(msg=msg, msg_detail=errmsg)
     else:
+        # 未知异常
         return error_response(msg_detail=f"{error.__class__} : {str(error)}")
 
 
@@ -54,6 +73,7 @@ class LesoonFlask(Flask):
         "ca": ca,
         "jwt": jwt,
         "toolbar": toolbar,
+        "hc": hc,
     }
 
     request_class = LesoonRequest
@@ -95,8 +115,21 @@ class LesoonFlask(Flask):
         if not self.logger.handlers:
             self.logger.addHandler(handler)
 
+    def _init_jaeger_tracer(self):
+        config = Config(config={'service_name': 'test'}, validate=True)
+        config.initialize_tracer()
+
 
 class LesoonApi(Api):
+
+    def handle_error(self, error: Exception):
+        """
+        因为flask-restful并未提供自定义的异常捕获,
+        这里直接将异常抛出给flask做全局异常处理.
+        Args:
+            error: 异常实例
+        """
+        raise error
 
     def add_resource_item(self, resource: t.Type[LesoonResource], *urls,
                           **kwargs):
@@ -130,5 +163,5 @@ class LesoonApi(Api):
 
     def register_view(self, view_class: t.Type[LesoonView], url, **kwargs):
         if not issubclass(view_class, LesoonView):
-            raise TypeError("reigster_view中的view_class必须为LesoonView的子类")
+            raise TypeError("view_class必须为LesoonView的子类")
         view_class.register(self.app, url, **kwargs)

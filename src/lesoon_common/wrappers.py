@@ -1,4 +1,4 @@
-""" 额外类库封装模块. """
+""" 第三方类库自定义拓展模块. """
 import datetime
 import typing as t
 
