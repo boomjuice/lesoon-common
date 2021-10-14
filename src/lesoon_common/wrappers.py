@@ -2,11 +2,11 @@
 import datetime
 import typing as t
 
-from flask import current_app
-from flask import has_request_context
-from flask import make_response
-from flask import render_template_string
-from flask import request
+from flask.ctx import has_request_context
+from flask.globals import current_app
+from flask.globals import request
+from flask.helpers import make_response
+from flask.templating import render_template_string
 from flask.wrappers import Request
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
@@ -136,7 +136,7 @@ class LesoonJwt(JWTManager):
 
         # flask_jwt_extended.current_user()的取值函数
         def user_lookup_callback(jwt_headers, jwt_data):
-            from .dataclass.base import TokenUser
+            from lesoon_common.dataclass.base import TokenUser
 
             return TokenUser.load(jwt_data["userInfo"])
 

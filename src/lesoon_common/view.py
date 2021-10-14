@@ -14,7 +14,6 @@ Examples：
     UserView.register(app, "/sysUser", endpoint = "sys_user")
     or api.register_view(UserView, "/sysUser", endpoint="sys_user")
 """
-
 import inspect
 import typing as t
 from collections import OrderedDict
@@ -40,7 +39,8 @@ from lesoon_common.utils.str import udlcase
 def route(rule: str,
           skip_decorator: bool = False,
           **options: t.Any) -> t.Callable:
-    """一个用于标示路由的装饰器,使用在BaseView的实例方法中，
+    """
+    一个用于标示路由的装饰器,使用在BaseView的实例方法中，
     与 `@app.route`使用相同
     """
 
@@ -160,6 +160,7 @@ class BaseView:
 
 
 class LesoonView(BaseView):
+    """ 单表视图. """
     resource: t.Type[LesoonResource] = None  # type:ignore
 
     method_decorators = [jwt_required()]
@@ -184,3 +185,12 @@ class LesoonView(BaseView):
         if not import_data.data_list:
             raise RequestError(code=ResponseCode.ReqBodyError, msg="导入数据为空")
         return self.resource.import_data(import_data)
+
+
+class LesoonMultiView(LesoonView):
+    """ 多表视图. """
+
+    # @route("/casadeDelete", methods=["DELETE"])
+    # @request_param({"delete_param": Param(loc="body")})
+    # def cascade_delete(self, delete_param: CascadeDeleteParam):
+    #     pass

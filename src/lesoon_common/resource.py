@@ -6,8 +6,8 @@ import typing as t
 from flask.views import MethodViewType
 from flask_restful import Resource
 from flask_sqlalchemy import Model
-from werkzeug.exceptions import BadRequestKeyError
 
+from lesoon_common.code import ResponseCode
 from lesoon_common.dataclass.resource import ImportData
 from lesoon_common.dataclass.resource import ImportParseResult
 from lesoon_common.exceptions import ResourceAttrError
@@ -126,7 +126,8 @@ class BaseResource(Resource):
         return _objs
 
     @classmethod
-    def after_create_many(cls, data_list: t.List[dict], _objs: t.List[BaseModel]):
+    def after_create_many(cls, data_list: t.List[dict],
+                          _objs: t.List[BaseModel]):
         """
         批量新增后操作.
         Args:
@@ -245,7 +246,7 @@ class BaseResource(Resource):
 class LesoonResourceType(MethodViewType):
     """Resource类定义检测元类."""
 
-    base_classes = {"LesoonResource", "SaasResource"}
+    base_classes = {"LesoonResource", "LesoonMultiResource", "SaasResource"}
 
     def __init__(cls, name, bases, d):  # noqa
         super().__init__(name, bases, d)
@@ -300,6 +301,7 @@ class LesoonResourceItem(BaseResource):
 
 
 class LesoonResource(BaseResource, metaclass=LesoonResourceType):
+    """ 单表资源."""
     if_item_lookup = True
 
     method_decorators = [jwt_required()]
@@ -317,14 +319,15 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         return success_response(result=result, msg="新建成功"), 201
 
     def delete(self):
-        try:
-            ids = request.args.get("ids") or request.json.get("ids")
-            ids = ids.strip().split(",")
-        except AttributeError:
-            raise BadRequestKeyError("缺少请求参数ids")
-        if any(ids):
+        # ids = 1,2,3..(query-param) or [1,2,3...](request-body)
+        ids = request.args.get("ids") or request.get_json(silent=True)
+        if isinstance(ids, str):
+            ids = ids.strip().split(',')
+        if ids and isinstance(ids, list):
             self.__class__.remove(ids)
-        return success_response(msg="删除成功")
+            return success_response(msg="删除成功")
+        else:
+            return error_response(code=ResponseCode.ReqError, msg="请求参数ids不合法")
 
     @classmethod
     def union_operate(cls, insert_rows: list, update_rows: list,
@@ -351,7 +354,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             union_filter.append(attr.__eq__(getattr(obj, udlcase(key))))
 
         if (len(union_filter) and
-            cls.__model__.query.filter(*union_filter).count()):
+                cls.__model__.query.filter(*union_filter).count()):
             msg_detail = (f"Excel [{obj.excel_row_pos}行,] "
                           f"根据约束[{import_data.union_key_name}]数据已存在")
             if import_data.validate_all:
@@ -361,7 +364,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     @classmethod
     def process_import_data(cls, import_data: ImportData,
-                           import_parse_result: ImportParseResult):
+                            import_parse_result: ImportParseResult):
         """导入操作写库逻辑."""
         _objs = list()
         for obj in import_parse_result.obj_list:
@@ -400,8 +403,8 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             msg_detail = " \n ".join(import_parse_result.insert_err_list)
             return error_response(
                 msg=f"导入结果: "
-                    f"成功条数[{len(import_parse_result.obj_list)}] "
-                    f"失败条数[{len(import_parse_result.insert_err_list)}]",
+                f"成功条数[{len(import_parse_result.obj_list)}] "
+                f"失败条数[{len(import_parse_result.insert_err_list)}]",
                 msg_detail=f"失败信息:{msg_detail}",
             )
         else:
@@ -414,6 +417,14 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         pass
 
 
+class LesoonMultiResource(LesoonResource):
+    """ 多表资源."""
+
+    @classmethod
+    def cascade_delete(cls, delete_param):
+        pass
+
+
 class SaasResource(LesoonResource):
     """ Saas相关资源与company_id绑定查询."""
     __model__: t.Type[BaseCompanyModel] = None  # type:ignore
@@ -421,7 +432,9 @@ class SaasResource(LesoonResource):
     @classmethod
     def select_filter(cls) -> LesoonQuery:
         query = super().select_filter()
-        return query.filter(cls.__model__.company_id == request.user.company_id)
+        query = query.filter(
+            cls.__model__.company_id == request.user.company_id)
+        return query
 
     @classmethod
     def _create_one(cls, data: dict):
@@ -437,7 +450,6 @@ class SaasResource(LesoonResource):
     @classmethod
     def before_import_insert_one(cls, obj: BaseCompanyModel,
                                  import_data: ImportData):
-        # 过滤条件以及唯一约束都要加上companyId做验证
         obj.company_id = request.user.company_id
         super().before_import_insert_one(obj, import_data)
 

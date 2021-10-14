@@ -1,12 +1,15 @@
-import os
 import errno
+import os
 import signal
 from functools import wraps
+
 from sqlalchemy.exc import SQLAlchemyError
 
 
 def timeout(seconds=2, error_message=os.strerror(errno.ETIMEDOUT)):
+
     def decorator(fn):
+
         def _handle_timeout(signum, frame):
             raise TimeoutError(error_message)
 

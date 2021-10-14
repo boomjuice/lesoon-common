@@ -41,7 +41,7 @@ def create_system_token():
     """生成系统间调用token.
     注意: 该token具有管理员权限
     """
-    from ..dataclass.base import TokenUser
+    from lesoon_common.dataclass.base import TokenUser
 
     env = os.environ.get("APP_CONFIG", "default")
     config = import_string("config.config")[env]

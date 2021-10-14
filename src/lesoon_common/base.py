@@ -2,23 +2,22 @@
 import logging
 import sys
 import typing as t
-import time
 
 from flask import current_app
 from flask import Flask
 from flask_restful import Api
+from jaeger_client import Config
 from sqlalchemy.exc import DatabaseError
 from werkzeug.exceptions import HTTPException
-from jaeger_client import Config
 
 from lesoon_common.code import PyMysqlCode
 from lesoon_common.exceptions import ServiceError
 from lesoon_common.extensions import ca
 from lesoon_common.extensions import db
+from lesoon_common.extensions import hc
 from lesoon_common.extensions import jwt
 from lesoon_common.extensions import ma
 from lesoon_common.extensions import toolbar
-from lesoon_common.extensions import hc
 from lesoon_common.resource import LesoonResource
 from lesoon_common.resource import LesoonResourceItem
 from lesoon_common.response import error_response

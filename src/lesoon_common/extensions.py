@@ -7,10 +7,10 @@ from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+from lesoon_common.plugins import HealthCheck
 from lesoon_common.wrappers import LesoonDebugTool
 from lesoon_common.wrappers import LesoonJwt
 from lesoon_common.wrappers import LesoonQuery
-from lesoon_common.plugins import HealthCheck
 
 db = SQLAlchemy(query_class=LesoonQuery, session_options={'autoflush': False})
 ma = Marshmallow()

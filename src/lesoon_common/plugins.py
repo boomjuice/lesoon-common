@@ -1,17 +1,18 @@
 """ 自定义的flask拓展插件模块."""
-import typing as t
-import time
 import sys
-from flask import Flask
+import time
+import typing as t
+
 from flask import current_app
+from flask import Flask
 from werkzeug.utils import import_string
 
-from lesoon_common.response import success_response
 from lesoon_common.response import error_response
+from lesoon_common.response import success_response
 from lesoon_common.utils.health_check import timeout
 
 
-class HealthCheck(object):
+class HealthCheck:
     """
     为确保在应用运行中各组件正常,需要作健康检查.
     该类通过自定义的检查函数来检查各组件是否正常,且有缓存机制.
@@ -25,13 +26,13 @@ class HealthCheck(object):
 
     """
 
-    def __init__(self, app: Flask = None):
-        self.cache = dict()
+    def __init__(self, app: t.Optional[Flask] = None):
+        self.cache: t.Dict[t.Callable, int] = dict()
         self.headers = {"Content-Type": "application/json"}
         self.err_timeout = 0
         self.success_ttl = 0
         self.failure_ttl = 0
-        self.checkers = list()
+        self.checkers: t.List[t.Callable] = list()
 
         if app is not None:
             self.init_app(app)
@@ -64,11 +65,14 @@ class HealthCheck(object):
     def _default_config(self) -> dict:
         return {
             # 每个检查函数的超时时间
-            'HEALTH_CHECK_TIMEOUT': 5,
+            'HEALTH_CHECK_TIMEOUT':
+                5,
             # 检查通过的缓存时间
-            'HEALTH_CHECK_SUCCESS_TTL': 20,
+            'HEALTH_CHECK_SUCCESS_TTL':
+                20,
             # 检查失败的缓存时间
-            'HEALTH_CHECK_FAILURE_TTL': 5,
+            'HEALTH_CHECK_FAILURE_TTL':
+                5,
             # 默认的检查函数列表
             'HEALTH_CHECK_DEFAULT_CHECKERS': [
                 'lesoon_common.utils.health_check.check_db'
@@ -83,7 +87,7 @@ class HealthCheck(object):
         filtered = [c for c in self.checkers]
         for checker in filtered:
             if (checker in self.cache and
-                self.cache[checker].get('expires') >= time.time()):
+                    self.cache[checker].get('expires') >= time.time()):
                 result = self.cache[checker]
             else:
                 result = self.run_check(checker)
@@ -102,8 +106,7 @@ class HealthCheck(object):
 
         try:
             if self.err_timeout > 0:
-                passed, output = timeout(
-                    self.err_timeout, "健康检查超时!")(checker)()
+                passed, output = timeout(self.err_timeout, "健康检查超时!")(checker)()
             else:
                 passed, output = checker()
         except Exception as e:
@@ -111,7 +114,7 @@ class HealthCheck(object):
             passed, output = False, e
         finally:
             elapsed_time = time.time() - start_time
-            elapsed_time = float('{:.6f}'.format(elapsed_time))
+            elapsed_time = float(f'{elapsed_time:.6f}')
 
         if passed:
             msg = f"健康检查:{checker.__name__} 通过"
@@ -122,9 +125,11 @@ class HealthCheck(object):
             expires = time.time() + self.failure_ttl
             current_app.logger.error(msg)
 
-        result = {'checker': checker.__name__,
-                  'passed': passed,
-                  'output': output,
-                  'expires': expires,
-                  'elapsed_time': elapsed_time}
+        result = {
+            'checker': checker.__name__,
+            'passed': passed,
+            'output': output,
+            'expires': expires,
+            'elapsed_time': elapsed_time
+        }
         return result
