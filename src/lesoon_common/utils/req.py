@@ -10,31 +10,31 @@ from lesoon_common.utils.str import camelcase
 
 class Param:
     param_miss_code = {
-        "params": ResponseCode.ReqParamMiss,
-        "body": ResponseCode.ReqBodyMiss,
-        "form": ResponseCode.ReqFormMiss,
+        'params': ResponseCode.ReqParamMiss,
+        'body': ResponseCode.ReqBodyMiss,
+        'form': ResponseCode.ReqFormMiss,
     }
 
     param_error_code = {
-        "params": ResponseCode.ReqParamError,
-        "body": ResponseCode.ReqBodyError,
-        "form": ResponseCode.ReqFormError,
+        'params': ResponseCode.ReqParamError,
+        'body': ResponseCode.ReqBodyError,
+        'form': ResponseCode.ReqFormError,
     }
 
     allow_locations = {
-        "params": lambda: request.args,
-        "body": lambda: request.get_json(silent=True),
-        "form": lambda: request.form,
+        'params': lambda: request.args,
+        'body': lambda: request.get_json(silent=True),
+        'form': lambda: request.form,
     }
 
     def __init__(
         self,
         key: t.Optional[str] = None,
         default: t.Any = inspect.Parameter.empty,
-        loc: str = "params",
+        loc: str = 'params',
         data_type: t.Any = str,
         deserialize: t.Any = None,
-        msg: str = "",
+        msg: str = '',
     ):
         self.key = key
         self.default = default
@@ -43,10 +43,10 @@ class Param:
         self.deserialize = deserialize or data_type
 
         if loc not in self.allow_locations.keys():
-            raise ValueError(f"{loc}不是{self.allow_locations.keys()}中的值")
+            raise ValueError(f'{loc}不是{self.allow_locations.keys()}中的值')
         self.loc = loc
 
-        self.msg = msg or f"传参异常:{key}"
+        self.msg = msg or f'传参异常:{key}'
 
         self.miss_code = self.param_miss_code[loc]
         self.error_code = self.param_error_code[loc]
@@ -68,12 +68,12 @@ def _get_request_param(param: Param) -> t.Any:
 
     if not param.key:
         # 没有参数键,直接返回
-        return data
-
-    try:
-        value = data.get(param.key)  # type:ignore[union-attr]
-    except AttributeError:
-        value = None
+        value = data
+    else:
+        try:
+            value = data.get(param.key)  # type:ignore[union-attr]
+        except AttributeError:
+            value = None
 
     if value is None:
         if param.default is inspect.Parameter.empty:
@@ -88,15 +88,15 @@ def _get_request_param(param: Param) -> t.Any:
         except ValueError:
             raise RequestError(
                 code=param.error_code,
-                msg=f"{param.key}类型转换异常 {param.deserialize}:{value}",
+                msg=f'{param.key} 类型转换异常 {param.deserialize}:{value}',
             )
 
 
 def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
     """解析函数/方法签名.
     示例:
-        if  func = def example(self,user_id:int=None)
-        return  {'user_id':Param(key='userId', data_type=int, loc='args')}
+        func = def example(self, user_id: int = None)
+        param_dict = {'user_id':Param(key='userId', data_type=int, loc='params')}
     """
     # 获取请求函数签名,解析参数
     param_dict = dict()
@@ -104,7 +104,7 @@ def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
 
     for arg_name, arg_param in func_params.items():
         # 实例方法特殊处理
-        if arg_name == "self":
+        if arg_name == 'self':
             continue
 
         if arg_param.annotation is inspect.Parameter.empty:
@@ -127,7 +127,8 @@ def request_param(
     param_dict: t.Optional[t.Dict[str, Param]] = None,
     extend_param_dict: t.Optional[t.Dict[str, Param]] = None,
 ):
-    """请求参数解析装饰器.
+    """
+    请求参数解析装饰器.
     示例:
     1. 根据函数签名获取请求参数，如下所示，默认从request.args中获取输入
         @request_param()
@@ -147,11 +148,13 @@ def request_param(
        def get_param(user_id: int, company_id: int):
             pass
 
-
+    Args:
+        param_dict: 请求参数字典
+        extend_param_dict: 额外参数字典,会覆盖通过函数签名生成的参数字典
 
     """
     if param_dict and extend_param_dict:
-        raise RuntimeError("param_dict 和 extend_param_dict 只可以定义一个")
+        raise RuntimeError('param_dict 和 extend_param_dict 只可以定义一个')
 
     def wrapper(fn):
         _param_dict = param_dict or _parse_func_signature(fn)

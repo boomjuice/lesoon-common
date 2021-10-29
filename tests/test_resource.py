@@ -33,7 +33,7 @@ class TestLesoonResource:
         user = self.generate_random_user(1)[0]
         UserResource.create(user)
 
-        user["login_name"] = "test_update"
+        user['login_name'] = 'test_update'
         res = UserResource.update(user)
         assert res == user
 
@@ -41,7 +41,7 @@ class TestLesoonResource:
         users = self.generate_random_user(20)
         UserResource.create(users)
 
-        UserResource.remove([user["id"] for user in users[:10]])
+        UserResource.remove([user['id'] for user in users[:10]])
 
         res, total = UserResource.page_get()
         assert total == 10
@@ -52,9 +52,9 @@ class TestLesoonResource:
         users = list()
         for i in range(size):
             user = {
-                "id": str(i),
-                "login_name": random_alpha_numeric(10),
-                "user_name": random_alpha_numeric(10),
+                'id': str(i),
+                'login_name': random_alpha_numeric(10),
+                'user_name': random_alpha_numeric(10),
             }
             users.append(user)
         return users

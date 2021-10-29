@@ -10,8 +10,8 @@ class ParseError(Exception):
     pass
 
 
-class ResourceAttrError(Exception):
-    """资源属性异常"""
+class ResourceDefindError(Exception):
+    """资源类定义异常"""
 
     pass
 

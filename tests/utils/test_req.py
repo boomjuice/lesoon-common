@@ -10,8 +10,8 @@ class TestReqUtil:
         def simple(a: int, b: str = None):
             pass
 
-        assert simple._param_dict["a"] == Param(key="a", data_type=int)
-        assert simple._param_dict["b"] == Param(key="b",
+        assert simple._param_dict['a'] == Param(key='a', data_type=int)
+        assert simple._param_dict['b'] == Param(key='b',
                                                 data_type=str,
                                                 default=None)
 
@@ -19,15 +19,15 @@ class TestReqUtil:
 
         @request_param(
             param_dict={
-                "a": Param(key="a", data_type=int, loc="body"),
-                "b": Param(key="b", data_type=str, default=None),
+                'a': Param(key='a', data_type=int, loc='body'),
+                'b': Param(key='b', data_type=str, default=None),
             })
         def simple(a, b):
             pass
 
-        assert simple._param_dict["a"] == Param(key="a",
+        assert simple._param_dict['a'] == Param(key='a',
                                                 data_type=int,
-                                                loc="body")
-        assert simple._param_dict["b"] == Param(key="b",
+                                                loc='body')
+        assert simple._param_dict['b'] == Param(key='b',
                                                 data_type=str,
                                                 default=None)

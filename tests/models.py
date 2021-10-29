@@ -11,7 +11,7 @@ from lesoon_common.model.schema import SqlaCamelAutoSchema
 
 
 class User(Model):
-    __tablename__ = "user"
+    __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
     login_name = Column(String, unique=True, nullable=False)
     user_name = Column(String)
@@ -20,7 +20,7 @@ class User(Model):
 
 
 class UserExt(Model):
-    __tablename__ = "user_ext"
+    __tablename__ = 'user_ext'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
     address = Column(String)
@@ -37,11 +37,11 @@ class UserSchema(SqlaCamelAutoSchema):
     class Meta(SqlaCamelAutoSchema.Meta):
         model = User
         ordered = False
-        exclude = ["create_time", "status"]
+        exclude = ['create_time', 'status']
 
 
 class UserExtSchema(SqlaCamelAutoSchema):
 
     class Meta(SqlaCamelAutoSchema.Meta):
         model = UserExt
-        exclude = ["create_time"]
+        exclude = ['create_time']

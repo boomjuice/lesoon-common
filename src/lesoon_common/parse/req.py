@@ -18,18 +18,18 @@ def extract_where_arg(where: t.Optional[str] = None) -> t.Dict[str, str]:
             else:
                 return _where
         except json.JSONDecodeError:
-            raise ParseError(f"请求参数无法序列化 where:{where}")
+            raise ParseError(f'请求参数无法序列化 where:{where}')
     else:
         return dict()
 
 
 def extract_sort_arg(sort: t.Optional[str] = None) -> t.List[t.Tuple[str, str]]:
     if sort:
-        if re.match(r"[,\w]+ ((asc)|(desc))", sort):
+        if re.match(r'[,\w]+ ((asc)|(desc))', sort):
             arg = []
-            for s in sort.split(","):
+            for s in sort.split(','):
                 # s = 'id asc' or 'id desc'
-                col, order = s.split(" ", 1)
+                col, order = s.split(' ', 1)
                 arg.append((col, order))
             return arg
         else:

@@ -1,10 +1,18 @@
 """ 自定义的flask拓展插件模块."""
+import configparser
+import os
 import sys
 import time
 import typing as t
+import warnings
 
+import jaeger_client
 from flask import current_app
 from flask import Flask
+from flask_opentracing import FlaskTracing
+from jaeger_client import config as jaeger_config
+from opentracing.ext import tags
+from opentracing_instrumentation.client_hooks import install_all_patches
 from werkzeug.utils import import_string
 
 from lesoon_common.response import error_response
@@ -14,7 +22,7 @@ from lesoon_common.utils.health_check import timeout
 
 class HealthCheck:
     """
-    为确保在应用运行中各组件正常,需要作健康检查.
+    为确保在应用运行中各组件正常,需要做健康检查.
     该类通过自定义的检查函数来检查各组件是否正常,且有缓存机制.
 
     Attributes:
@@ -27,8 +35,8 @@ class HealthCheck:
     """
 
     def __init__(self, app: t.Optional[Flask] = None):
-        self.cache: t.Dict[t.Callable, int] = dict()
-        self.headers = {"Content-Type": "application/json"}
+        self.cache: t.Dict[t.Callable, dict] = dict()
+        self.headers = {'Content-Type': 'application/json'}
         self.err_timeout = 0
         self.success_ttl = 0
         self.failure_ttl = 0
@@ -58,11 +66,12 @@ class HealthCheck:
 
         if '/health' not in {r.rule for r in app.url_map.iter_rules()}:
             app.add_url_rule(rule='/health',
-                             endpoint="health_check",
+                             endpoint='health_check',
                              view_func=self.run)
         app.extensions['health_check'] = self
 
-    def _default_config(self) -> dict:
+    @staticmethod
+    def _default_config() -> dict:
         return {
             # 每个检查函数的超时时间
             'HEALTH_CHECK_TIMEOUT':
@@ -83,6 +92,15 @@ class HealthCheck:
         self.checkers.append(func)
 
     def run(self):
+        """
+        健康检查入口.
+        运行正常则缓存结果,异常也会缓存结果以防止频繁访问.
+        Returns:
+            response: `lesoon-common.Response`
+            status_code:
+                success = 200
+                failure = 500
+        """
         results = []
         filtered = [c for c in self.checkers]
         for checker in filtered:
@@ -102,11 +120,17 @@ class HealthCheck:
             return error_response(output=results), 500, self.headers
 
     def run_check(self, checker: t.Callable) -> dict:
+        """
+        运行健康检查函数.
+        Args:
+            checker: 健康检查函数
+
+        """
         start_time = time.time()
 
         try:
             if self.err_timeout > 0:
-                passed, output = timeout(self.err_timeout, "健康检查超时!")(checker)()
+                passed, output = timeout(self.err_timeout, '健康检查超时!')(checker)()
             else:
                 passed, output = checker()
         except Exception as e:
@@ -117,11 +141,11 @@ class HealthCheck:
             elapsed_time = float(f'{elapsed_time:.6f}')
 
         if passed:
-            msg = f"健康检查:{checker.__name__} 通过"
+            msg = f'健康检查:{checker.__name__} 通过'
             expires = time.time() + self.success_ttl
             current_app.logger.debug(msg)
         else:
-            msg = f"健康检查: {checker.__name__} 异常:{output}"
+            msg = f'健康检查: {checker.__name__} 异常:{output}'
             expires = time.time() + self.failure_ttl
             current_app.logger.error(msg)
 
@@ -133,3 +157,181 @@ class HealthCheck:
             'elapsed_time': elapsed_time
         }
         return result
+
+
+class EnvInterpolation(configparser.ExtendedInterpolation):
+    """环境变量插值拓展."""
+
+    def before_get(self, parser, section, option, value, defaults):
+        if (env_var := os.path.expandvars(value)) != value:
+            # 存在环境变量
+            return str(env_var)
+        else:
+            # 不存在于环境变量,不存在值会返回[DEFAULT]中的默认值
+            return super().before_get(parser, section, option, value, defaults)
+
+
+class Bootstrap:
+    """ 配置引导拓展.
+    主要用于配置的自动读取以及热更新
+    目前只支持kubernetes.configmap方式.
+
+    Attributes:
+        bootstrap_filename: 引导文件名, 默认为 bootstrap.cfg
+        config_filename: 配置文件名, 默认为config.py
+    """
+    bootstrap_filename = 'bootstrap.cfg'
+
+    fixed_sections = {'app', 'config'}
+
+    kubernetes_section = 'kubernetes.config'
+
+    def __init__(self,
+                 bootstrap_filename: t.Optional[str] = None,
+                 app: t.Optional[Flask] = None):
+        self.bootstrap_filename = (bootstrap_filename or
+                                   self.__class__.bootstrap_filename)
+        self.config_filename = None
+        if app:
+            self.init_app(app)
+
+    def init_app(self, app: Flask):
+        parser = configparser.ConfigParser(interpolation=EnvInterpolation())
+
+        # 读取bootstrap配置
+        if not parser.read(self.bootstrap_filename):
+            raise RuntimeError(f'启动配置:{self.bootstrap_filename}不存在')
+        if not all([parser.has_section(sec) for sec in self.fixed_sections]):
+            raise RuntimeError(f'必须配置以下sections:{self.fixed_sections}')
+
+        self.config_filename = app.config_path.split('.', 1)[0]  # type:ignore
+
+        if parser.getboolean('config', 'kubernetes_enabled'):
+            # 通过k8s读取配置
+            self.reload_config_from_configmap(parser=parser, app=app)
+
+    def reload_config_from_configmap(self, parser: configparser.ConfigParser,
+                                     app: Flask):
+        """
+        从k8s.configmap获取配置文件,写入本地的配置文件中.
+        Args:
+            parser: `configparser.ConfigParser`
+            app: `LesoonFlask`
+
+        """
+        if not parser.has_section(self.kubernetes_section):
+            raise RuntimeError(f'{self.bootstrap_filename}配置异常:'
+                               f'不存在名为{self.kubernetes_section}的section')
+
+        from kubernetes import client, config
+        name = parser.get('kubernetes.config', 'name')
+        namespace = parser.get('kubernetes.config',
+                               'namespace',
+                               fallback='default')
+        # 获取configmap
+        config.load_incluster_config()
+        k8s_api = client.CoreV1Api()
+
+        # cm = {"xx.py":"python code"}
+        cm = k8s_api.read_namespaced_config_map(name=name, namespace=namespace)
+
+        # configmap中存储的为python文件的字符串格式
+        config_code = cm.data.get(f'{name}.py')
+        with open(f'{self.config_filename}.py', mode='w',
+                  encoding='utf-8') as fp:
+            app.logger.info(f'正在将configmap中配置写入{self.config_filename}.py')
+            fp.write(config_code)
+        app.init_config()  # type:ignore
+
+
+class LinkTracer:
+    """ 链路跟踪器. """
+
+    @staticmethod
+    def _default_config() -> dict:
+        return {
+            # 链路跟踪类型
+            'TRACING_TYPE': 'jaeger',
+            # 是否开启链路跟踪
+            'TRACING_ENABLED': True,
+            # jaeger跟踪配置
+            'TRACING_JAEGER_CONFIG': {
+                # 应用名称
+                'SERVICE_NAME': os.environ.get('APP_NAME'),
+                # 日志输出
+                'LOGGING': True,
+                # 生成128位trace_id
+                'GENERATE_128BIT_TRACE_ID': True,
+                # 每个RPC请求生成一个SPAN
+                'ONE_SPAN_PER_RPC': True,
+                # 采样类型
+                'SAMPLER_TYPE': 'const',
+                # 采样参数
+                'SAMPLER_PARAM': True
+            }
+        }
+
+    def init_app(self, app: Flask):
+        """
+        初始化链路跟踪器jaeger.
+        Args:
+            app: `LesoonFlask`
+
+        """
+        for k, v in self._default_config().items():
+            app.config.setdefault(k, v)
+
+        tracing_type = app.config.get('TRACING_TYPE')
+
+        if tracing_type == 'jaeger':
+            self.init_jaeger_tracing(app=app)
+        else:
+            raise RuntimeError(f'不支持的链路跟踪类型:{tracing_type}')
+
+    def init_jaeger_tracing(self, app: Flask):
+        config: dict = app.config.get('TRACING_JAEGER_CONFIG')  # type:ignore
+        for k, v in self._default_config().get('TRACING_JAEGER_CONFIG',
+                                               {}).items():
+            config.setdefault(k, v)
+
+        service_name = config.get('SERVICE_NAME')
+        if not service_name:
+            warnings.warn(
+                'TRACING_JAEGER_CONFIG.SERVICE_NAME为空, jaeger链路跟踪初始化异常')
+            return
+
+        # tracer参数
+        sampler_type = config.get('SAMPLER_TYPE')
+        sampler_param = config.get('SAMPLER_PARAM')
+        logging = config.get('LOGGING')
+        generate_128bit_trace_id = config.get('GENERATE_128BIT_TRACE_ID')
+        one_span_per_rpc = config.get('ONE_SPAN_PER_RPC')
+
+        jc = jaeger_config.Config(
+            service_name=service_name,
+            config={
+                'sampler': {
+                    'type': sampler_type,
+                    'param': sampler_param,
+                },
+                'logging': logging,
+                'propagation': 'b3',
+                'generate_128bit_trace_id': generate_128bit_trace_id,
+                # FlaskTracing集成jaeger-client时此处存在bug,
+                # 初始化span的时候未设置span.kind为rpc,
+                # 会导致此时的span永远是新的对象,无法继承父类的span,
+                # 导致链路信息断层无法收集,jaeger上无法显示链路信息
+                # 具体判断逻辑见`jaeger_client.tracer.py:182`
+                'tags': {
+                    tags.SPAN_KIND: tags.SPAN_KIND_RPC_SERVER
+                }
+            },
+            validate=True)
+        tracer: jaeger_client.Tracer = jc.initialize_tracer(
+        )  # type:ignore[assignment]
+        tracer.one_span_per_rpc = one_span_per_rpc  # type:ignore[assignment]
+        # 加载通用跟踪钩子
+        install_all_patches()
+        app.extensions['link_tracer'] = FlaskTracing(tracer=tracer,
+                                                     trace_all_requests=True,
+                                                     app=app)

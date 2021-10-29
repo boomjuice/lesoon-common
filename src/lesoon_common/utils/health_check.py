@@ -31,7 +31,7 @@ def timeout(seconds=2, error_message=os.strerror(errno.ETIMEDOUT)):
 def check_db():
     from lesoon_common.extensions import db
     try:
-        db.engine.execute("SELECT 1")
-        return True, "数据库连接正常"
+        db.engine.execute('SELECT 1')
+        return True, '数据库连接正常'
     except SQLAlchemyError as e:
-        return False, f"数据库连接异常:{e}"
+        return False, f'数据库连接异常:{e}'

@@ -39,7 +39,7 @@ from marshmallow.fields import UUID
 
 
 class IntStr(Integer, String):
-    default_error_messages = {"invalid": "Not a valid integer."}
+    default_error_messages = {'invalid': 'Not a valid integer.'}
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any,
                    **kwargs):

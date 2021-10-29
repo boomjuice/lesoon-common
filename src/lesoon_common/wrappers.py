@@ -2,6 +2,7 @@
 import datetime
 import typing as t
 
+from flask import Flask
 from flask.ctx import has_request_context
 from flask.globals import current_app
 from flask.globals import request
@@ -30,29 +31,29 @@ class LesoonRequest(Request):
 
     @cached_property
     def where(self) -> t.Dict[str, t.Any]:
-        where = extract_where_arg(self.args.get("where"))
+        where = extract_where_arg(self.args.get('where'))
         return where
 
     @cached_property
     def sort(self) -> t.List[t.Tuple[str, str]]:
-        sort = extract_sort_arg(self.args.get("sort"))
+        sort = extract_sort_arg(self.args.get('sort'))
         return sort
 
     @cached_property
     def if_page(self) -> bool:
-        if_page = bool(self.args.get("ifPage", default=1, type=int))
+        if_page = bool(self.args.get('ifPage', default=1, type=int))
         return if_page
 
     @cached_property
     def page(self):
-        page = self.args.get("page", default=1, type=int)
+        page = self.args.get('page', default=1, type=int)
         if page < 1:
             page = 1
         return page
 
     @cached_property
     def page_size(self):
-        page_size = self.args.get("pageSize",
+        page_size = self.args.get('pageSize',
                                   default=self.__class__.PAGE_SIZE_DEFAULT,
                                   type=int)
 
@@ -74,7 +75,7 @@ class LesoonRequest(Request):
         if has_request_context():
             return get_token()
         else:
-            return ""
+            return ''
 
 
 class LesoonQuery(BaseQuery):
@@ -84,27 +85,28 @@ class LesoonQuery(BaseQuery):
         if_page: t.Optional[bool] = None,
         page: t.Optional[int] = None,
         per_page: t.Optional[int] = None,
-        if_count: bool = True,
+        count_query: t.Optional[BaseQuery] = None,
     ):
-        """分页查询.
-        :param if_page: 是否分页
-        :param page: 页码
-        :param per_page: 页大小
-        :param if_count: 是否进行count()计算总和
+        """
+        执行分页查询.
+
+        Args:
+            if_page: 是否分页
+            page: 页码
+            per_page: 页大小
+            count_query: 总计查询对象,默认为self.count()
+
         """
         page = page or request.page  # type:ignore
         per_page = per_page or request.page_size  # type:ignore
         if_page = if_page or request.if_page  # type:ignore
+        count_query = count_query or self
 
         if if_page:
             items = self.limit(per_page).offset((page - 1) * per_page).all()
         else:
             items = self.all()
-
-        if if_count:
-            total = self.order_by(None).count()
-        else:
-            total = 0
+        total = count_query.order_by(None).count()
 
         return Pagination(self, page, per_page, total, items)
 
@@ -131,14 +133,14 @@ class LesoonQuery(BaseQuery):
 
 class LesoonJwt(JWTManager):
 
-    def __init__(self, app=None):
+    def __init__(self, app: t.Optional[Flask] = None):
         super().__init__(app=app)
 
         # flask_jwt_extended.current_user()的取值函数
         def user_lookup_callback(jwt_headers, jwt_data):
-            from lesoon_common.dataclass.base import TokenUser
+            from lesoon_common.dataclass.user import TokenUser
 
-            return TokenUser.load(jwt_data["userInfo"])
+            return TokenUser.load(jwt_data['userInfo'])
 
         def invalid_token_callback(msg):
             return error_response(code=ResponseCode.TokenInValid, msg=msg)
@@ -151,54 +153,54 @@ class LesoonJwt(JWTManager):
         self._expired_token_callback = expired_token_callback
 
     @staticmethod
-    def _set_default_configuration_options(app):
-        app.config.setdefault("JWT_ACCESS_TOKEN_EXPIRES",
+    def _set_default_configuration_options(app: Flask):
+        app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES',
                               datetime.timedelta(days=30))
-        app.config.setdefault("JWT_ACCESS_COOKIE_NAME", "access_token_cookie")
-        app.config.setdefault("JWT_ACCESS_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_ACCESS_CSRF_COOKIE_NAME",
-                              "csrf_access_token")
-        app.config.setdefault("JWT_ACCESS_CSRF_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_ACCESS_CSRF_FIELD_NAME", "csrf_token")
-        app.config.setdefault("JWT_ACCESS_CSRF_HEADER_NAME", "X-CSRF-TOKEN")
-        app.config.setdefault("JWT_ALGORITHM", "HS256")
-        app.config.setdefault("JWT_COOKIE_CSRF_PROTECT", True)
-        app.config.setdefault("JWT_COOKIE_DOMAIN", None)
-        app.config.setdefault("JWT_COOKIE_SAMESITE", None)
-        app.config.setdefault("JWT_COOKIE_SECURE", False)
-        app.config.setdefault("JWT_CSRF_CHECK_FORM", False)
-        app.config.setdefault("JWT_CSRF_IN_COOKIES", True)
-        app.config.setdefault("JWT_CSRF_METHODS",
-                              ["POST", "PUT", "PATCH", "DELETE"])
-        app.config.setdefault("JWT_DECODE_ALGORITHMS", None)
-        app.config.setdefault("JWT_DECODE_AUDIENCE", None)
-        app.config.setdefault("JWT_DECODE_ISSUER", None)
-        app.config.setdefault("JWT_DECODE_LEEWAY", 0)
-        app.config.setdefault("JWT_ENCODE_AUDIENCE", None)
-        app.config.setdefault("JWT_ENCODE_ISSUER", None)
-        app.config.setdefault("JWT_ERROR_MESSAGE_KEY", "msg")
-        app.config.setdefault("JWT_HEADER_NAME", "token")
-        app.config.setdefault("JWT_HEADER_TYPE", None)
-        app.config.setdefault("JWT_IDENTITY_CLAIM", "sub")
-        app.config.setdefault("JWT_JSON_KEY", "access_token")
-        app.config.setdefault("JWT_PRIVATE_KEY", None)
-        app.config.setdefault("JWT_PUBLIC_KEY", None)
-        app.config.setdefault("JWT_QUERY_STRING_NAME", "token")
-        app.config.setdefault("JWT_QUERY_STRING_VALUE_PREFIX", "")
-        app.config.setdefault("JWT_REFRESH_COOKIE_NAME", "refresh_token_cookie")
-        app.config.setdefault("JWT_REFRESH_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_REFRESH_CSRF_COOKIE_NAME",
-                              "csrf_refresh_token")
-        app.config.setdefault("JWT_REFRESH_CSRF_COOKIE_PATH", "/")
-        app.config.setdefault("JWT_REFRESH_CSRF_FIELD_NAME", "csrf_token")
-        app.config.setdefault("JWT_REFRESH_CSRF_HEADER_NAME", "X-CSRF-TOKEN")
-        app.config.setdefault("JWT_REFRESH_JSON_KEY", "refresh_token")
-        app.config.setdefault("JWT_REFRESH_TOKEN_EXPIRES",
+        app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+        app.config.setdefault('JWT_ACCESS_COOKIE_PATH', '/')
+        app.config.setdefault('JWT_ACCESS_CSRF_COOKIE_NAME',
+                              'csrf_access_token')
+        app.config.setdefault('JWT_ACCESS_CSRF_COOKIE_PATH', '/')
+        app.config.setdefault('JWT_ACCESS_CSRF_FIELD_NAME', 'csrf_token')
+        app.config.setdefault('JWT_ACCESS_CSRF_HEADER_NAME', 'X-CSRF-TOKEN')
+        app.config.setdefault('JWT_ALGORITHM', 'HS256')
+        app.config.setdefault('JWT_COOKIE_CSRF_PROTECT', True)
+        app.config.setdefault('JWT_COOKIE_DOMAIN', None)
+        app.config.setdefault('JWT_COOKIE_SAMESITE', None)
+        app.config.setdefault('JWT_COOKIE_SECURE', False)
+        app.config.setdefault('JWT_CSRF_CHECK_FORM', False)
+        app.config.setdefault('JWT_CSRF_IN_COOKIES', True)
+        app.config.setdefault('JWT_CSRF_METHODS',
+                              ['POST', 'PUT', 'PATCH', 'DELETE'])
+        app.config.setdefault('JWT_DECODE_ALGORITHMS', None)
+        app.config.setdefault('JWT_DECODE_AUDIENCE', None)
+        app.config.setdefault('JWT_DECODE_ISSUER', None)
+        app.config.setdefault('JWT_DECODE_LEEWAY', 0)
+        app.config.setdefault('JWT_ENCODE_AUDIENCE', None)
+        app.config.setdefault('JWT_ENCODE_ISSUER', None)
+        app.config.setdefault('JWT_ERROR_MESSAGE_KEY', 'msg')
+        app.config.setdefault('JWT_HEADER_NAME', 'token')
+        app.config.setdefault('JWT_HEADER_TYPE', None)
+        app.config.setdefault('JWT_IDENTITY_CLAIM', 'sub')
+        app.config.setdefault('JWT_JSON_KEY', 'access_token')
+        app.config.setdefault('JWT_PRIVATE_KEY', None)
+        app.config.setdefault('JWT_PUBLIC_KEY', None)
+        app.config.setdefault('JWT_QUERY_STRING_NAME', 'token')
+        app.config.setdefault('JWT_QUERY_STRING_VALUE_PREFIX', '')
+        app.config.setdefault('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+        app.config.setdefault('JWT_REFRESH_COOKIE_PATH', '/')
+        app.config.setdefault('JWT_REFRESH_CSRF_COOKIE_NAME',
+                              'csrf_refresh_token')
+        app.config.setdefault('JWT_REFRESH_CSRF_COOKIE_PATH', '/')
+        app.config.setdefault('JWT_REFRESH_CSRF_FIELD_NAME', 'csrf_token')
+        app.config.setdefault('JWT_REFRESH_CSRF_HEADER_NAME', 'X-CSRF-TOKEN')
+        app.config.setdefault('JWT_REFRESH_JSON_KEY', 'refresh_token')
+        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES',
                               datetime.timedelta(days=30))
-        app.config.setdefault("JWT_SECRET_KEY", None)
-        app.config.setdefault("JWT_SESSION_COOKIE", True)
-        app.config.setdefault("JWT_TOKEN_LOCATION", ("headers", "query_string"))
-        app.config.setdefault("JWT_ENCODE_NBF", False)
+        app.config.setdefault('JWT_SECRET_KEY', None)
+        app.config.setdefault('JWT_SESSION_COOKIE', True)
+        app.config.setdefault('JWT_TOKEN_LOCATION', ('headers', 'query_string'))
+        app.config.setdefault('JWT_ENCODE_NBF', False)
 
     def _encode_jwt_from_config(
         self,
@@ -212,13 +214,13 @@ class LesoonJwt(JWTManager):
         jwt_token = super()._encode_jwt_from_config(identity, token_type,
                                                     claims, fresh,
                                                     expires_delta, headers)
-        secret = current_app.config.get("JWT_SECRET_KEY")
-        return jwe.encrypt(jwt_token, key=secret, cty="JWT").decode()
+        secret = current_app.config.get('JWT_SECRET_KEY')
+        return jwe.encrypt(jwt_token, key=secret, cty='JWT').decode()
 
 
 class LesoonDebugTool(DebugToolbarExtension):
 
-    def init_app(self, app):
+    def init_app(self, app: Flask):
         wrap_json = """
         <html>
             <head>
@@ -238,12 +240,12 @@ class LesoonDebugTool(DebugToolbarExtension):
         """
 
         def json_to_html(response):
-            if response.mimetype == "application/json" and request.args.get(
-                    "_debug"):
+            if response.mimetype == 'application/json' and request.args.get(
+                    '_debug'):
                 html_wrapped_response = make_response(
                     render_template_string(
                         wrap_json,
-                        response=response.data.decode("utf-8"),
+                        response=response.data.decode('utf-8'),
                         http_code=response.status,
                     ),
                     response.status_code,

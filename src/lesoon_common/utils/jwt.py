@@ -29,11 +29,11 @@ from werkzeug.utils import import_string
 
 
 def get_token():
-    token = getattr(_request_ctx_stack.top, "token", None)
+    token = getattr(_request_ctx_stack.top, 'token', None)
     if token is None:
         raise RuntimeError(
-            "You must call `@jwt_required()` or `verify_jwt_in_request()` "
-            "before using this method")
+            'You must call `@jwt_required()` or `verify_jwt_in_request()` '
+            'before using this method')
     return token
 
 
@@ -41,10 +41,10 @@ def create_system_token():
     """生成系统间调用token.
     注意: 该token具有管理员权限
     """
-    from lesoon_common.dataclass.base import TokenUser
+    from lesoon_common.dataclass.user import TokenUser
+    from lesoon_common.base import LesoonFlask
 
-    env = os.environ.get("APP_CONFIG", "default")
-    config = import_string("config.config")[env]
+    config = import_string(LesoonFlask.config_path)
 
     secret_key = config.JWT_SECRET_KEY
     expires_delta = config.JWT_ACCESS_TOKEN_EXPIRES
@@ -54,16 +54,16 @@ def create_system_token():
     now = datetime.now(timezone.utc)
 
     token_data = {
-        "iat": now,
-        "exp": now + timedelta(seconds=expires_delta),
-        "jti": str(uuid.uuid4()),
-        "userInfo": user.to_dict(),
-        "type": "access",
-        "sub": str(user.id),
+        'iat': now,
+        'exp': now + timedelta(seconds=expires_delta),
+        'jti': str(uuid.uuid4()),
+        'userInfo': TokenUser.dump(user),
+        'type': 'access',
+        'sub': str(user.id),
     }
     return jwe.encrypt(jwt.encode(token_data, secret_key),
                        key=secret_key,
-                       cty="JWT").decode()
+                       cty='JWT').decode()
 
 
 def verify_jwt_in_request(optional=False,
@@ -102,7 +102,7 @@ def verify_jwt_in_request(optional=False,
             raise
         _request_ctx_stack.top.jwt = {}
         _request_ctx_stack.top.jwt_header = {}
-        _request_ctx_stack.top.jwt_user = {"loaded_user": None}
+        _request_ctx_stack.top.jwt_user = {'loaded_user': None}
         _request_ctx_stack.top.jwt_location = None
         _request_ctx_stack.top.token = None
         return
@@ -170,16 +170,16 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     # Each entry in this list is a tuple (<location>, <encoded-token-function>)
     get_encoded_token_functions = []
     for location in locations:
-        if location == "cookies":
+        if location == 'cookies':
             get_encoded_token_functions.append(
                 (location, lambda: _decode_jwt_from_cookies(refresh)))
-        elif location == "query_string":
+        elif location == 'query_string':
             get_encoded_token_functions.append(
                 (location, _decode_jwt_from_query_string))
-        elif location == "headers":
+        elif location == 'headers':
             get_encoded_token_functions.append(
                 (location, _decode_jwt_from_headers))
-        elif location == "json":
+        elif location == 'json':
             get_encoded_token_functions.append(
                 (location, lambda: _decode_jwt_from_json(refresh)))
         else:
@@ -206,10 +206,10 @@ def _decode_jwt_from_request(locations, fresh, refresh=False):
     # token was found in any of the expected locations.
     if not decoded_token:
         if len(locations) > 1:
-            err_msg = "Missing JWT in {start_locs} or {end_locs} ({details})".format(
-                start_locs=", ".join(locations[:-1]),
+            err_msg = 'Missing JWT in {start_locs} or {end_locs} ({details})'.format(
+                start_locs=', '.join(locations[:-1]),
                 end_locs=locations[-1],
-                details="; ".join(errors),
+                details='; '.join(errors),
             )
             raise NoAuthorizationError(err_msg)
         else:

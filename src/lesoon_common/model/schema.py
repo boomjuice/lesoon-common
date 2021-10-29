@@ -54,7 +54,7 @@ class CamelSchema(Schema):
         # 保持有序
         ordered = True
         # 时间格式
-        datetimeformat = "%Y-%m-%d %H:%M:%S"
+        datetimeformat = '%Y-%m-%d %H:%M:%S'
 
 
 class SqlaCamelSchema(SQLAlchemySchema, CamelSchema, FixedOperatorSchema):

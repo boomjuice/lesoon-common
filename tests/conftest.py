@@ -8,7 +8,7 @@ from lesoon_common import LesoonFlask
 
 class Config:
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 
 @pytest.fixture
