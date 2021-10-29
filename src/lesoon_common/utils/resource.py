@@ -9,7 +9,7 @@ from marshmallow.utils import from_iso_datetime
 from lesoon_common.dataclass.resource import ImportData
 from lesoon_common.dataclass.resource import ImportParseResult
 from lesoon_common.exceptions import ServiceError
-from lesoon_common.parse.sqla import parse_attribute_name
+from lesoon_common.parse.sqla import parse_valid_model_attribute
 from lesoon_common.response import ResponseCode
 from lesoon_common.utils.str import udlcase
 
@@ -34,20 +34,18 @@ def parse_import_data(import_data: ImportData,
 
     try:
         for col_name in import_data.col_names:
-            attr = parse_attribute_name(col_name, model)
-            if attr is None:
-                raise AttributeError(f"{model}不存在列:{col_name}")
+            attr = parse_valid_model_attribute(col_name, model)
             col_attrs.append(attr)
 
         flag = True
         for rid, row in enumerate(import_data.data_list):
             # 唯一约束键对应的值
-            union_key_value = ""
+            union_key_value = ''
             # 表对应的model对象
             obj = model()
             for cid, attr in enumerate(col_attrs):
                 if cid >= len(row):
-                    raise AttributeError(f"列[{attr.name}]在数据集中不存在")
+                    raise AttributeError(f'列[{attr.name}]在数据集中不存在')
                 col_value = row[cid]
 
                 # Excel中的位置
@@ -56,14 +54,14 @@ def parse_import_data(import_data: ImportData,
                 obj.excel_row_pos = rid + import_data.import_start_index
                 obj.excel_col_pos = chr(65 + cid)
                 excel_position = (
-                    f"Excel [{obj.excel_row_pos}行,{obj.excel_col_pos}列]"
-                    f"{attr.name}:{col_value}")
+                    f'Excel [{obj.excel_row_pos}行,{obj.excel_col_pos}列]'
+                    f'{attr.name}:{col_value}')
 
                 # 值为空
                 if not bool(col_value):
                     # 不允许为空
                     if import_data.must_array[cid]:
-                        parse_err_list.append(excel_position + "不能为空")
+                        parse_err_list.append(excel_position + '不能为空')
                         flag = False
                         break
                     # 允许为空
@@ -72,14 +70,14 @@ def parse_import_data(import_data: ImportData,
 
                 # 类型检测
                 if attr.type.python_type is int:
-                    if not col_value.lstrip("-").isdigit():
-                        parse_err_list.append(excel_position + "必须为整数")
+                    if not col_value.lstrip('-').isdigit():
+                        parse_err_list.append(excel_position + '必须为整数')
                         flag = False
                         break
 
                 if attr.type.python_type in (decimal.Decimal, float):
-                    if not col_value.lstrip("-").replace(",", "", 1).isdigit():
-                        parse_err_list.append(excel_position + "必须为数值")
+                    if not col_value.lstrip('-').replace(',', '', 1).isdigit():
+                        parse_err_list.append(excel_position + '必须为数值')
                         flag = False
                         break
 
@@ -88,7 +86,7 @@ def parse_import_data(import_data: ImportData,
                         col_value = from_iso_datetime(col_value)
                     except ValueError:
                         parse_err_list.append(excel_position +
-                                              "日期格式无法解析,需遵循ISO8601标准")
+                                              '日期格式无法解析,需遵循ISO8601标准')
                         flag = False
                         break
 
@@ -103,8 +101,8 @@ def parse_import_data(import_data: ImportData,
                 # excel中是否已存在当前数据
                 if union_key_value in union_key_value_set:
                     parse_err_list.append(
-                        f"Excel [{rid + import_data.import_start_index}行,] "
-                        f"违反唯一约束[{import_data.union_key_name}]")
+                        f'Excel [{rid + import_data.import_start_index}行,] '
+                        f'违反唯一约束[{import_data.union_key_name}]')
                     flag = False
                     continue
                 else:
@@ -114,9 +112,9 @@ def parse_import_data(import_data: ImportData,
                 obj_list.append(obj)
 
     except Exception as e:
-        raise ServiceError(ResponseCode.Error, f"导入数据异常:{e}")
+        raise ServiceError(ResponseCode.Error, f'导入数据异常:{e}')
 
-    log.info(f"解析成功的行数为:{len(obj_list)}")
+    log.info(f'解析成功的行数为:{len(obj_list)}')
     import_parse_result = ImportParseResult(obj_list, parse_err_list,
                                             insert_err_list)
     return import_parse_result

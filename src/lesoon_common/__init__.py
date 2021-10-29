@@ -18,7 +18,9 @@ from .model import CamelSchema
 from .model import fields
 from .model import SqlaCamelAutoSchema
 from .model import SqlaCamelSchema
+from .resource import LesoonMultiResource
 from .resource import LesoonResource
+from .resource import SaasMultiResource
 from .resource import SaasResource
 from .response import error_response
 from .response import Response
@@ -26,9 +28,10 @@ from .response import success_response
 from .utils.jwt import jwt_required
 from .utils.req import Param
 from .utils.req import request_param
+from .view import LesoonMultiView
 from .view import LesoonView
 from .view import route
 from .wrappers import LesoonQuery
 from .wrappers import LesoonRequest
 
-__version__ = "0.0.1"
+__version__ = '0.0.2'

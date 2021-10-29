@@ -24,9 +24,11 @@ from flask import Flask
 from flask.wrappers import ResponseBase
 from flask_restful.utils import unpack
 
+from lesoon_common.dataclass.req import CascadeDeleteParam
 from lesoon_common.dataclass.resource import ImportData
 from lesoon_common.exceptions import RequestError
 from lesoon_common.resource import BaseResource
+from lesoon_common.resource import LesoonMultiResource
 from lesoon_common.resource import LesoonResource
 from lesoon_common.response import ResponseCode
 from lesoon_common.response import success_response
@@ -52,18 +54,18 @@ def route(rule: str,
     return decorator
 
 
-def get_route_members(base_cls, cls):
+def _get_route_members(base_cls, cls):
     """获取被@route装饰的实例方法."""
     base_members = dir(base_cls)
     all_members = inspect.getmembers(cls, predicate=inspect.isfunction)
     return [
         member for member in all_members
-        if member[0] not in base_members and hasattr(member[1], "_rule_cache")
+        if member[0] not in base_members and hasattr(member[1], '_rule_cache')
     ]
 
 
 class BaseView:
-    url: str = ""
+    url: str = ''
 
     resource: t.Type[BaseResource] = None  # type:ignore
 
@@ -87,14 +89,14 @@ class BaseView:
                 return "test"
 
         UserView.register(app, "/sysUser", endpoint = "sys_user")
-        在注册之后可以通过 GET http:://yourhost/sysUser/test 访问.
+        在注册之后可以通过 GET http:://yourhost:port/sysUser/test 访问.
         """
 
         url = url or cls.url
         base_cls = base_cls or BaseView
 
         # 获取需要路由的方法
-        members = get_route_members(base_cls, cls)
+        members = _get_route_members(base_cls, cls)
 
         bp = Blueprint(name=endpoint or udlcase(cls.__name__),
                        import_name=__name__,
@@ -103,7 +105,7 @@ class BaseView:
         for name, func in members:
             rule, options = func._rule_cache
             view_func = cls.make_view_func(name, func.skip_decorator)
-            func_endpoint = options.pop("endpoint", None)
+            func_endpoint = options.pop('endpoint', None)
 
             bp.add_url_rule(rule=rule,
                             endpoint=func_endpoint,
@@ -113,12 +115,12 @@ class BaseView:
         app.register_blueprint(bp)
 
     @classmethod
-    def make_view_func(cls, name: str, skip_decorator: bool):
+    def make_view_func(cls, func_name: str, skip_decorator: bool):
         from flask import request
 
         instance = cls()
 
-        view = getattr(instance, name)
+        view = getattr(instance, func_name)
 
         def make_func(fn):
 
@@ -151,7 +153,7 @@ class BaseView:
             if media_type in representations:
                 data, code, headers = unpack(resp)
                 resp = representations[media_type](data, code, headers)
-                resp.headers["Content-Type"] = media_type
+                resp.headers['Content-Type'] = media_type
                 return resp
 
             return resp
@@ -165,11 +167,11 @@ class LesoonView(BaseView):
 
     method_decorators = [jwt_required()]
 
-    @route("/save", methods=["POST"])
+    @route('/save', methods=['POST'])
     @request_param({
-        "insert_rows": Param(key="insertRows", loc="body", data_type=list),
-        "update_rows": Param(key="updateRows", loc="body", data_type=list),
-        "delete_rows": Param(key="deleteRows", loc="body", data_type=list),
+        'insert_rows': Param(key='insertRows', loc='body', data_type=list),
+        'update_rows': Param(key='updateRows', loc='body', data_type=list),
+        'delete_rows': Param(key='deleteRows', loc='body', data_type=list),
     })
     def union_operate(self, insert_rows: list, update_rows: list,
                       delete_rows: list):
@@ -177,20 +179,24 @@ class LesoonView(BaseView):
         self.resource.union_operate(insert_rows, update_rows, delete_rows)
         return success_response()
 
-    @route("/importData", methods=["POST"])
-    @request_param({"req_data": Param(loc="body")})
+    @route('/importData', methods=['POST'])
+    @request_param({'req_data': Param(loc='body')})
     def import_data(self, req_data: dict):
         """数据导入."""
         import_data: ImportData = ImportData.load(req_data)
         if not import_data.data_list:
-            raise RequestError(code=ResponseCode.ReqBodyError, msg="导入数据为空")
+            raise RequestError(code=ResponseCode.ReqBodyError, msg='导入数据为空')
         return self.resource.import_data(import_data)
 
 
 class LesoonMultiView(LesoonView):
     """ 多表视图. """
+    resource: t.Type[LesoonMultiResource] = None  # type:ignore
 
-    # @route("/casadeDelete", methods=["DELETE"])
-    # @request_param({"delete_param": Param(loc="body")})
-    # def cascade_delete(self, delete_param: CascadeDeleteParam):
-    #     pass
+    @route('/cascadeDelete', methods=['DELETE'])
+    @request_param({
+        'delete_param': Param(loc='body', deserialize=CascadeDeleteParam.load)
+    })
+    def cascade_delete(self, delete_param: CascadeDeleteParam):
+        self.resource.cascade_delete(delete_param=delete_param)
+        return success_response()

@@ -24,8 +24,8 @@ class BaseCode(enum.Enum):
         self.solution = solution
 
     def __repr__(self):
-        return "<{}.{}: {}>".format(
+        return '<{}.{}: {}>'.format(
             self.__class__.__name__,
             self._name_,
-            ", ".join([repr(v) for v in self._all_values]),
+            ', '.join([repr(v) for v in self._all_values]),
         )

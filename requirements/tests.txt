@@ -1,5 +1,7 @@
 -r core.txt
+lesoon-client>=0.0.1
+mypy>=0.910
+mysqlclient>=2.0.3
 
 pytest>=6.2.4
 pytest-cov>=2.12.1
-mypy>=0.910

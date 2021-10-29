@@ -1,2 +1,2 @@
-from .mysql import PyMysqlCode
+from .database import MysqlCode
 from .response import ResponseCode

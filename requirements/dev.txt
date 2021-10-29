@@ -1,4 +1,4 @@
 -r core.txt
+devpi>=2.2.0
 
 tox>=3.23.1
-devpi>=2.2.0
