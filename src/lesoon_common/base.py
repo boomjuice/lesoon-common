@@ -146,6 +146,7 @@ class LesoonFlask(Flask):
 
 
 class LesoonApi(Api):
+    supported_register_classes = {LesoonResource, LesoonView}
 
     def handle_error(self, error: Exception):
         """
@@ -190,3 +191,14 @@ class LesoonApi(Api):
         if not issubclass(view_class, LesoonView):
             raise TypeError('view_class必须为LesoonView的子类')
         view_class.register(self.app, url, **kwargs)
+
+    def register(self, rule_provider: t.Union[t.Type[LesoonResource],
+                                              t.Type[LesoonView]], *args,
+                 **kwargs):
+        if issubclass(rule_provider, LesoonResource):
+            self.register_resource(rule_provider, *args, **kwargs)
+        elif issubclass(rule_provider, LesoonView):
+            self.register_view(rule_provider, *args, **kwargs)
+        else:
+            raise TypeError(
+                f'rule_provider只支持为{self.supported_register_classes}的子类')

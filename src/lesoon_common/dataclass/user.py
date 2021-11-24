@@ -24,9 +24,17 @@ class TokenUser(BaseDataClass):
     # 用户编号
     user_id: int
     # 邮箱地址
-    email: str = field(metadata={'required': False, 'load_default': ''})
+    email: str = field(metadata={
+        'allow_none': True,
+        'required': False,
+        'load_default': ''
+    })
     # 手机号
-    phone_number: str = field(metadata={'required': False, 'load_default': ''})
+    phone_number: str = field(metadata={
+        'allow_none': True,
+        'required': False,
+        'load_default': ''
+    })
     # 用户图标
     icon: str = field(metadata={
         'allow_none': True,

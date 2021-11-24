@@ -37,6 +37,8 @@ class BaseResource(Resource):
     # 资源的Schema对象
     __schema__: t.Type[SqlaCamelSchema] = None  # type:ignore
 
+    # 资源名称
+    _name: t.Optional[str] = None
     # schema实例
     _schema: t.Optional[SqlaCamelSchema] = None
     # 删除基准列
@@ -312,6 +314,12 @@ class LesoonResourceType(MethodViewType):
     def __new__(mcs, name, bases, d):
         new_cls = super().__new__(mcs, name, bases, d)
         if name not in mcs.base_classes:
+            if res_name := getattr(d, '_name', ''):
+                # 优先类属性定义
+                name = res_name
+            elif model := d.get('__model__', None):
+                # 其次模型名称
+                name = model.__name__ + 'Resource'
             mcs.register_resources[name] = new_cls  # noqa
         return new_cls
 
@@ -507,8 +515,8 @@ class LesoonMultiResource(LesoonResource):
     """ 多表资源."""
 
     @staticmethod
-    def pre_validate_remove(resource: t.Type[BaseResource],
-                            filters: t.Optional[SqlaExpList] = None):
+    def validate_remove(resource: t.Type[BaseResource],
+                        filters: t.Optional[SqlaExpList] = None):
         query = resource.get_query()
         if filters:
             query = query.filter(*filters)
@@ -529,12 +537,12 @@ class LesoonMultiResource(LesoonResource):
             ref_column = parse_valid_model_attribute(detail_table.ref_pk_name,
                                                      detail_resource.__model__)
             # 查询关联表待删除数据
-            cls.pre_validate_remove(
+            cls.validate_remove(
                 resource=detail_resource,
                 filters=[ref_column.in_(delete_param.pk_values)])
 
-        cls.pre_validate_remove(resource=cls,
-                                filters=[pk_col.in_(delete_param.pk_values)])
+        cls.validate_remove(resource=cls,
+                            filters=[pk_col.in_(delete_param.pk_values)])
         db.session.commit()
 
 
