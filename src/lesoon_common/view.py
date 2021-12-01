@@ -67,7 +67,7 @@ def _get_route_members(base_cls, cls):
 class BaseView:
     url: str = ''
 
-    resource: t.Type[BaseResource] = None  # type:ignore
+    resource: BaseResource = None  # type:ignore
 
     representations: t.Dict[str, t.Callable] = {}
 
@@ -163,7 +163,7 @@ class BaseView:
 
 class LesoonView(BaseView):
     """ 单表视图. """
-    resource: t.Type[LesoonResource] = None  # type:ignore
+    resource: LesoonResource = None  # type:ignore
 
     method_decorators = [jwt_required()]
 
@@ -191,7 +191,7 @@ class LesoonView(BaseView):
 
 class LesoonMultiView(LesoonView):
     """ 多表视图. """
-    resource: t.Type[LesoonMultiResource] = None  # type:ignore
+    resource: LesoonMultiResource = None  # type:ignore
 
     @route('/cascadeDelete', methods=['DELETE'])
     @request_param({

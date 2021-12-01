@@ -2,12 +2,15 @@
 提供对资源的通用的增删改查
 """
 import typing as t
+from contextlib import contextmanager
 
 from flask.globals import current_app
 from flask.views import MethodViewType
 from flask_restful import Resource
+from flask_sqlalchemy import get_state
 from flask_sqlalchemy import Model
 from flask_sqlalchemy import Pagination
+from sqlalchemy.orm.session import Session
 
 from lesoon_common.code import ResponseCode
 from lesoon_common.dataclass.req import CascadeDeleteParam
@@ -15,7 +18,6 @@ from lesoon_common.dataclass.resource import ImportData
 from lesoon_common.dataclass.resource import ImportParseResult
 from lesoon_common.exceptions import ResourceDefindError
 from lesoon_common.exceptions import ServiceError
-from lesoon_common.extensions import db
 from lesoon_common.globals import request
 from lesoon_common.model.base import BaseCompanyModel
 from lesoon_common.model.base import BaseModel
@@ -28,6 +30,17 @@ from lesoon_common.utils.jwt import jwt_required
 from lesoon_common.utils.resource import parse_import_data
 from lesoon_common.utils.str import udlcase
 from lesoon_common.wrappers import LesoonQuery
+
+
+@contextmanager
+def session_scope():
+    session = get_state(current_app).db.session
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
 
 
 class BaseResource(Resource):
@@ -52,14 +65,31 @@ class BaseResource(Resource):
 
     @property
     def model(self):
-        return self.__class__.__model__
+        return self.__model__
 
     @property
     def schema(self):
-        return self.__class__.get_schema()
+        return self.get_schema()
 
-    @classmethod
-    def get_query(cls,
+    @property
+    def session(self) -> Session:
+        session = get_state(current_app).db.session
+        if not session.is_active:
+            session.begin()
+        return session
+
+    def commit(self, flush: bool = False):
+        session = self.session
+        try:
+            if flush:
+                session.flush()
+            else:
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
+    def get_query(self,
                   add_where: bool = True,
                   add_sort: bool = True) -> LesoonQuery:
         """
@@ -70,28 +100,25 @@ class BaseResource(Resource):
             query: `type:LesoonQuery`
 
         """
-        query = cls.__model__.query  # type:ignore[attr-defined]
+        query = self.__model__.query  # type:ignore[attr-defined]
         return query.with_request_condition(add_where=add_where,
                                             add_sort=add_sort)
 
-    @classmethod
-    def select_filter(cls) -> LesoonQuery:
+    def select_filter(self) -> LesoonQuery:
         """
         分页查询的query对象.
         """
-        return cls.get_query()
+        return self.get_query()
 
-    @classmethod
-    def before_page_dump(cls, page_result: Pagination):
+    def before_page_dump(self, page_result: Pagination):
         """
         分页查询序列化前操作.
         示例： 比方说需要在序列化前将编码转换成名称,调用外部接口等
         """
         pass
 
-    @classmethod
     def page_get(
-            cls,
+            self,
             query: t.Optional[LesoonQuery] = None,
             schema: t.Optional[SqlaCamelSchema] = None,
             count_query: t.Optional[LesoonQuery] = None) -> t.Tuple[t.Any, int]:
@@ -103,168 +130,137 @@ class BaseResource(Resource):
             schema: marshmallow序列化模式实例
             count_query: 总计查询query对象
         """
-        _query: LesoonQuery = query or cls.select_filter()
-        _schema: SqlaCamelSchema = schema or cls.get_schema()
+        _query: LesoonQuery = query or self.select_filter()
+        _schema: SqlaCamelSchema = schema or self.get_schema()
         page_result = _query.paginate(count_query=count_query)
 
-        cls.before_page_dump(page_result=page_result)
+        self.before_page_dump(page_result=page_result)
 
         results = _schema.dump(page_result.items, many=True)
         return results, page_result.total
 
-    @classmethod
-    def before_create_one(cls, data: dict):
+    def before_create_one(self, obj: BaseModel):
         """
         新增前操作.
         Args:
-             data: `cls.__model__`对应的字典
+             obj: `self.__model__`对应实例对象
 
         """
         pass
 
-    @classmethod
-    def _create_one(cls, data: dict):
-        """
-        新增单条资源.
-        Args:
-            data: `cls.__model__`对应的字典
+    def _create_one(self, obj: BaseModel):
+        self.session.add(obj)
+        return obj
 
-        Returns:
-            _obj: `cls.__model__`实例对象
-        """
-        _obj = cls.get_schema().load(data)
-        db.session.add(_obj)
-        return _obj
-
-    @classmethod
-    def after_create_one(cls, data: dict, _obj: BaseModel):
+    def after_create_one(self, data: dict, obj: BaseModel):
         """
         新增后操作.
         Args:
-             data: `cls.__model__`对应的字典
-             _obj: `cls.__model__`实例对象
+             data: `self.__model__`对应的字典
+             obj: `self.__model__`实例对象
         """
         pass
 
-    @classmethod
-    def before_create_many(cls, data_list: t.List[dict]):
-        """
-        批量新增前操作.
-        Args:
-            data_list: `cls.__model__`对应的字典列表
-
-        """
-        for data in data_list:
-            cls.before_create_one(data)
-
-    @classmethod
-    def _create_many(cls, data_list: t.List[dict]):
-        """
-        批量新增资源.
-        Args:
-            data_list: `cls.__model__`对应的字典列表
-
-        Returns:
-            _objs: `cls.__model__`实例对象列表
-        """
-        _objs = cls.get_schema().load(data_list, many=True)
-        db.session.add_all(_objs)
-        return _objs
-
-    @classmethod
-    def after_create_many(cls, data_list: t.List[dict],
-                          _objs: t.List[BaseModel]):
-        """
-        批量新增后操作.
-        Args:
-            data_list: `cls.__model__`对应的字典列表
-            _objs: `cls.__model__`实例对象列表
-
-        """
-        for data, obj in zip(data_list, _objs):
-            cls.after_create_one(data, obj)
-
-    @classmethod
-    def create_one(cls, data: dict):
+    def create_one(self, data: dict):
         """
            新增单条资源入口.
         Args:
-            data: `cls.__model__`对应的字典
+            data: `self.__model__`对应的字典
 
         Returns:
-            _obj: `cls.__model__`实例对象
+            obj: `self.__model__`实例对象
         """
-        cls.before_create_one(data)
-        _obj = cls._create_one(data)
-        cls.after_create_one(data, _obj)
-        return _obj
+        obj = self.get_schema().load(data)
+        self.before_create_one(obj)
+        obj = self._create_one(obj)
+        self.after_create_one(data, obj)
+        return obj
 
-    @classmethod
-    def create_many(cls, data_list: t.List[dict]):
+    def before_create_many(self, objs: t.List[BaseModel]):
+        """
+        批量新增前操作.
+        Args:
+            objs: `self.__model__`实例对象列表
+
+        """
+        for obj in objs:
+            self.before_create_one(obj)
+
+    def _create_many(self, objs: t.List[BaseModel]):
+        self.session.add_all(objs)
+        return objs
+
+    def after_create_many(self, data_list: t.List[dict],
+                          objs: t.List[BaseModel]):
+        """
+        批量新增后操作.
+        Args:
+            data_list: `self.__model__`对应的字典列表
+            objs: `self.__model__`实例对象列表
+
+        """
+        for data, obj in zip(data_list, objs):
+            self.after_create_one(data, obj)
+
+    def create_many(self, data_list: t.List[dict]):
         """
            批量新增资源入口.
         Args:
-            data_list: `cls.__model__`对应的字典列表
+            data_list: `self.__model__`对应的字典列表
 
         Returns:
-            _objs: `cls.__model__`实例对象列表
+            objs: `self.__model__`实例对象列表
         """
-        cls.before_create_many(data_list)
-        _objs = cls._create_many(data_list)
-        cls.after_create_many(data_list, _objs)
-        return _objs
+        objs = self.get_schema().load(data_list, many=True)
+        self.before_create_many(objs)
+        objs = self._create_many(objs)
+        self.after_create_many(data_list, objs)
+        return objs
 
-    @classmethod
-    def create(cls, data: t.Union[dict, t.List[dict]]):
+    def create(self, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
         result = None
         if isinstance(data, list):
-            cls.create_many(data)
+            self.create_many(data)
         else:
-            result = cls.create_one(data)
-
-        db.session.commit()
-        result = cls.get_schema().dump(result)
+            result = self.create_one(data)
+        self.commit()
+        result = self.get_schema().dump(result)
         return result
 
-    @classmethod
-    def update_one(cls, data: dict):
+    def update_one(self, data: dict):
         """更新单条资源."""
-        _obj = cls.get_schema().load(data, partial=True)
-        _q = cls.get_query(add_sort=False).filter(
-            cls.__model__.id == data.get('id'))
+        obj = self.get_schema().load(data, partial=True)
+        _q = self.get_query(add_sort=False).filter(
+            self.__model__.id == data.get('id')).first()
         if not _q:
-            _obj = None
+            obj = None
         else:
-            _obj = cls.get_schema().load(data, partial=True, instance=_q)
-        return _obj
+            obj = self.get_schema().load(data, partial=True, instance=_q)
+        return obj
 
-    @classmethod
-    def update_many(cls, data_list: t.List[dict]):
+    def update_many(self, data_list: t.List[dict]):
         """批量更新资源."""
         for data in data_list:
-            cls.update_one(data=data)
+            self.update_one(data=data)
         return None
 
-    @classmethod
-    def update(cls, data: t.Union[dict, t.List[dict]]):
+    def update(self, data: t.Union[dict, t.List[dict]]):
         """新增资源入口."""
         result = None
         if isinstance(data, list):
-            cls.update_many(data)
+            self.update_many(data)
         else:
-            result = cls.update_one(data)
-        db.session.commit()
-        result = cls.get_schema().dump(result)
+            result = self.update_one(data)
+        self.commit()
+        result = self.get_schema().dump(result)
         return result
 
-    @classmethod
-    def before_remove_many(cls, ids: t.List[str]):
+    def before_remove_many(self, ids: t.List[str]):
         """批量删除前操作."""
         pass
 
-    @classmethod
-    def _remove_many(cls,
+    def _remove_many(self,
                      ids: t.List[str],
                      filters: t.Optional[SqlaExpList] = None):
         """
@@ -275,30 +271,28 @@ class BaseResource(Resource):
             filters: sqlalchemy过滤条件. 示例: SysUser.company_id == 1
 
         """
-        attr = parse_valid_model_attribute(cls._default_rm_col, cls.__model__)
-        query: LesoonQuery = cls.get_query(add_sort=False).filter(attr.in_(ids))
+        attr = parse_valid_model_attribute(self._default_rm_col, self.__model__)
+        query: LesoonQuery = self.get_query(add_sort=False).filter(
+            attr.in_(ids))
         if filters:
             query = query.filter(*filters)
         query.delete(synchronize_session=False)
 
-    @classmethod
-    def after_remove_many(cls, ids: t.List[str]):
+    def after_remove_many(self, ids: t.List[str]):
         """批量删除后操作."""
         pass
 
-    @classmethod
-    def remove_many(cls, ids: t.List[str]):
-        cls.before_remove_many(ids)
-        cls._remove_many(ids)
-        cls.after_remove_many(ids)
+    def remove_many(self, ids: t.List[str]):
+        self.before_remove_many(ids)
+        self._remove_many(ids)
+        self.after_remove_many(ids)
 
-    @classmethod
-    def remove(cls, ids: t.List[str]):
+    def remove(self, ids: t.List[str]):
         """删除资源入口."""
         if not ids:
             return
-        cls.remove_many(ids)
-        db.session.commit()
+        self.remove_many(ids)
+        self.commit()
 
 
 class LesoonResourceType(MethodViewType):
@@ -354,7 +348,7 @@ class LesoonResourceItem(BaseResource):
 
     @property
     def lookup_field(self):
-        return self.__class__.item_lookup_field
+        return self.item_lookup_field
 
     def get_one_raw(self, lookup):
         field = getattr(self.model, self.item_lookup_field)
@@ -362,16 +356,16 @@ class LesoonResourceItem(BaseResource):
         return self.model.query.filter(field == field_val).first()
 
     def get(self, **lookup):
-        _obj = self.get_one_raw(lookup)
-        return success_response(result=self.schema.dump(_obj))
+        obj = self.get_one_raw(lookup)
+        return success_response(result=self.schema.dump(obj))
 
     def put(self, **lookup):
         return self.update(lookup)
 
     def delete(self, **lookup):
-        if _obj := self.get_one_raw(lookup):
-            db.session.delete(_obj)
-            db.session.commit()
+        if obj := self.get_one_raw(lookup):
+            self.session.delete(obj)
+            self.session.commit()
         return success_response()
 
 
@@ -381,8 +375,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
 
     method_decorators = [jwt_required()]
 
-    @classmethod
-    def reflect_resource_cls(cls, name: str):
+    def reflect_resource_cls(self, name: str):
         """
         通过名称反射获取对应资源类.
         Args:
@@ -405,11 +398,11 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         return success_response(result=results, total=total)
 
     def put(self):
-        result = self.__class__.update(data=request.json)
+        result = self.update(data=request.json)
         return success_response(result=result, msg='更新成功')
 
     def post(self):
-        result = self.__class__.create(data=request.json)
+        result = self.create(data=request.json)
         return success_response(result=result, msg='新建成功'), 201
 
     def delete(self):
@@ -418,37 +411,34 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
         if isinstance(ids, str):
             ids = ids.strip().split(',')
         if ids and isinstance(ids, list):
-            self.__class__.remove(ids)
+            self.remove(ids)
             return success_response(msg='删除成功')
         else:
             return error_response(code=ResponseCode.ReqError, msg='请求参数ids不合法')
 
-    @classmethod
-    def union_operate(cls, insert_rows: list, update_rows: list,
+    def union_operate(self, insert_rows: list, update_rows: list,
                       delete_rows: list):
         """新增，更新，删除的联合操作."""
-        cls.create_many(insert_rows)
-        cls.update_many(update_rows)
-        cls.remove_many(delete_rows)
-        db.session.commit()
+        self.create_many(insert_rows)
+        self.update_many(update_rows)
+        self.remove_many(delete_rows)
+        self.commit()
 
-    @classmethod
-    def before_import_data(cls, import_data: ImportData):
+    def before_import_data(self, import_data: ImportData):
         """解析导入数据前置操作."""
         pass
 
-    @classmethod
-    def before_import_insert_one(cls, obj: Model, import_data: ImportData):
+    def before_import_insert_one(self, obj: Model, import_data: ImportData):
         """导入数据写库前操作.
         默认会进行查库校验当前对象是否存在
         """
         union_filter = list()
         for key in import_data.union_key:
-            attr = parse_valid_model_attribute(key, cls.__model__)
+            attr = parse_valid_model_attribute(key, self.__model__)
             union_filter.append(attr.__eq__(getattr(obj, udlcase(key))))
 
         if (len(union_filter) and
-                cls.__model__.query.filter(*union_filter).count()):
+                self.__model__.query.filter(*union_filter).count()):
             msg_detail = (f'Excel [{obj.excel_row_pos}行,] '
                           f'根据约束[{import_data.union_key_name}]数据已存在')
             if import_data.validate_all:
@@ -456,29 +446,27 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             else:
                 raise ServiceError(msg=msg_detail)
 
-    @classmethod
-    def process_import_data(cls, import_data: ImportData,
+    def process_import_data(self, import_data: ImportData,
                             import_parse_result: ImportParseResult):
         """导入操作写库逻辑."""
-        _objs = list()
+        objs = list()
         for obj in import_parse_result.obj_list:
-            cls.before_import_insert_one(obj, import_data)
+            self.before_import_insert_one(obj, import_data)
             if hasattr(obj, 'error'):
                 import_parse_result.insert_err_list.append(obj.error)
             else:
-                _objs.append(obj)
+                objs.append(obj)
 
-        db.session.bulk_save_objects(_objs)
-        import_parse_result.obj_list = _objs
-        db.session.commit()
+        self.session.bulk_save_objects(objs)
+        import_parse_result.obj_list = objs
+        self.commit()
 
-    @classmethod
-    def import_data(cls, import_data: ImportData):
+    def import_data(self, import_data: ImportData):
         """数据导入入口."""
-        cls.before_import_data(import_data)
+        self.before_import_data(import_data)
 
         import_parse_result: ImportParseResult = parse_import_data(
-            import_data, cls.__model__)
+            import_data, self.__model__)
 
         if import_parse_result.parse_err_list:
             msg_detail = '数据异常<br/>' + '<br/>'.join(
@@ -489,9 +477,9 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             msg_detail = '<br/>'.join(import_parse_result.insert_err_list)
             return error_response(msg='未解析到数据', msg_detail=msg_detail)
 
-        cls.process_import_data(import_data, import_parse_result)
+        self.process_import_data(import_data, import_parse_result)
 
-        cls.after_import_data(import_data)
+        self.after_import_data(import_data)
 
         if import_parse_result.insert_err_list:
             msg_detail = ' \n '.join(import_parse_result.insert_err_list)
@@ -505,8 +493,7 @@ class LesoonResource(BaseResource, metaclass=LesoonResourceType):
             return success_response(
                 msg=f'导入成功: 成功条数[{len(import_parse_result.obj_list)}]')
 
-    @classmethod
-    def after_import_data(cls, import_data: ImportData):
+    def after_import_data(self, import_data: ImportData):
         """导入数据后置操作."""
         pass
 
@@ -515,7 +502,7 @@ class LesoonMultiResource(LesoonResource):
     """ 多表资源."""
 
     @staticmethod
-    def validate_remove(resource: t.Type[BaseResource],
+    def validate_remove(resource: BaseResource,
                         filters: t.Optional[SqlaExpList] = None):
         query = resource.get_query()
         if filters:
@@ -525,25 +512,24 @@ class LesoonMultiResource(LesoonResource):
             resource.remove_many(
                 [getattr(row, resource._default_rm_col) for row in delete_rows])
 
-    @classmethod
-    def cascade_delete(cls, delete_param: CascadeDeleteParam):
+    def cascade_delete(self, delete_param: CascadeDeleteParam):
         pk_col = parse_valid_model_attribute(name=delete_param.pk_name,
-                                             model=cls.__model__)
+                                             model=self.__model__)
         for detail_table in delete_param.detail_tables:
             # 根据资源名获取资源类
-            detail_resource: t.Type[LesoonResource] = cls.reflect_resource_cls(
+            detail_resource: t.Type[LesoonResource] = self.reflect_resource_cls(
                 detail_table.entity_name)
             # 获取关联列对象
             ref_column = parse_valid_model_attribute(detail_table.ref_pk_name,
                                                      detail_resource.__model__)
             # 查询关联表待删除数据
-            cls.validate_remove(
-                resource=detail_resource,
+            self.validate_remove(
+                resource=detail_resource(),
                 filters=[ref_column.in_(delete_param.pk_values)])
 
-        cls.validate_remove(resource=cls,
-                            filters=[pk_col.in_(delete_param.pk_values)])
-        db.session.commit()
+        self.validate_remove(resource=self,
+                             filters=[pk_col.in_(delete_param.pk_values)])
+        self.session.commit()
 
 
 class SaasResource(LesoonResource):
@@ -552,34 +538,29 @@ class SaasResource(LesoonResource):
     """
     __model__: t.Type[BaseCompanyModel] = None  # type:ignore
 
-    @classmethod
-    def get_query(cls, add_where=True, add_sort=True) -> LesoonQuery:
+    def get_query(self, add_where=True, add_sort=True) -> LesoonQuery:
         query = super().get_query(add_where=add_where, add_sort=add_sort)
         query = query.filter(
-            cls.__model__.company_id == request.user.company_id)
+            self.__model__.company_id == request.user.company_id)
         return query
 
-    @classmethod
-    def _create_one(cls, data: dict):
-        data['companyId'] = data.get('companyId') or request.user.company_id
-        return super()._create_one(data=data)
+    def _create_one(self, obj: BaseCompanyModel):
+        obj.company_id = obj.company_id or request.user.company_id
+        return super()._create_one(obj=obj)
 
-    @classmethod
-    def _create_many(cls, data_list: t.List[dict]):
-        for data in data_list:
-            data['companyId'] = data.get('companyId') or request.user.company_id
-        return super()._create_many(data_list=data_list)
+    def _create_many(self, objs: t.List[BaseCompanyModel]):
+        for obj in objs:
+            obj.company_id = obj.company_id or request.user.company_id
+        return super()._create_many(objs=objs)
 
-    @classmethod
-    def before_import_data(cls, import_data: ImportData):
+    def before_import_data(self, import_data: ImportData):
         # 导入验证唯一键也需要携带company_id过滤
         super().before_import_data(import_data=import_data)
         if (import_data.union_key and
                 not import_data.union_key.count('companyId')):
             import_data.union_key.append('companyId')
 
-    @classmethod
-    def before_import_insert_one(cls, obj: BaseCompanyModel,
+    def before_import_insert_one(self, obj: BaseCompanyModel,
                                  import_data: ImportData):
         obj.company_id = request.user.company_id
         super().before_import_insert_one(obj, import_data)

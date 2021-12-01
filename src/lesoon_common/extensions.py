@@ -12,7 +12,7 @@ from lesoon_common.wrappers import LesoonDebugTool
 from lesoon_common.wrappers import LesoonJwt
 from lesoon_common.wrappers import LesoonQuery
 
-db = SQLAlchemy(query_class=LesoonQuery, session_options={'autoflush': False})
+db = SQLAlchemy(query_class=LesoonQuery, session_options={'autocommit': True})
 ma = Marshmallow()
 ca = Cache()
 jwt = LesoonJwt()

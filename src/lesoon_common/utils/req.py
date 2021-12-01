@@ -67,7 +67,6 @@ def _get_request_param(param: Param) -> t.Any:
     data = loc_func()
 
     if not param.key:
-        # 没有参数键,直接返回
         value = data
     else:
         try:
@@ -84,7 +83,7 @@ def _get_request_param(param: Param) -> t.Any:
             return param.default
     else:
         try:
-            return param.deserialize(value)
+            return param.deserialize(value) if isinstance(value, str) else value
         except ValueError:
             raise RequestError(
                 code=param.error_code,

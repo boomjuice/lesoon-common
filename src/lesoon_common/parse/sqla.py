@@ -228,9 +228,8 @@ def parse_model_attribute(
 
 
 def parse_valid_model_attribute(
-        name: str,
-        model: t.Union[TableType,
-                       Model]) -> t.Union[Column, InstrumentedAttribute]:
+    name: str, model: t.Union[TableType, t.Type[Model]]
+) -> t.Union[Column, InstrumentedAttribute]:
     """
        根据 model,name获取模型的字段对象,不存在就抛异常
 

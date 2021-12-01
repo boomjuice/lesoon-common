@@ -14,6 +14,9 @@ dataclass = partial(dataclass, base_schema=CamelSchema)
 class BaseDataClass:
     Schema: t.ClassVar[t.Type[Schema]] = Schema
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @classmethod
     def load(cls, data, **kwargs):
         return cls.Schema().load(data, **kwargs)
