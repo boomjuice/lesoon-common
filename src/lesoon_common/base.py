@@ -19,6 +19,7 @@ from lesoon_common.extensions import db
 from lesoon_common.extensions import hc
 from lesoon_common.extensions import jwt
 from lesoon_common.extensions import ma
+from lesoon_common.extensions import mg
 from lesoon_common.extensions import toolbar
 from lesoon_common.plugins import Bootstrap
 from lesoon_common.resource import LesoonResource
@@ -85,6 +86,7 @@ class LesoonFlask(Flask):
     default_extensions: t.Dict[str, t.Any] = {
         'db': db,
         'ma': ma,
+        'mg': mg,
         'ca': ca,
         'jwt': jwt,
         'toolbar': toolbar,

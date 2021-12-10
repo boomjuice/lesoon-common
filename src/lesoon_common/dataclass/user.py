@@ -1,5 +1,7 @@
 from dataclasses import field
 
+import marshmallow as ma
+
 from lesoon_common.dataclass.base import BaseDataClass
 from lesoon_common.dataclass.base import dataclass
 
@@ -15,8 +17,6 @@ class TokenUser(BaseDataClass):
     company_code: str = field(metadata={'required': False, 'load_default': ''})
     # 公司名称
     company_name: str = field(metadata={'required': False, 'load_default': ''})
-    # 组织id
-    org_id: int
     # 登录名
     login_name: str
     # 用户名称
@@ -56,11 +56,30 @@ class TokenUser(BaseDataClass):
     # token有效时间
     token_expire: int = field(metadata={'required': False, 'load_default': 0})
     # 软件版本号
-    version_no: str = field(metadata={'required': False, 'load_default': ''})
+    version_no: str = field(metadata={
+        'required': False,
+        'load_default': '',
+        'allow_none': True
+    })
     # app版本
-    app_version: str = field(metadata={'required': False, 'load_default': ''})
+    app_version: str = field(metadata={
+        'required': False,
+        'load_default': '',
+        'allow_none': True
+    })
     # app类型
-    app_type: str = field(metadata={'required': False, 'load_default': ''})
+    app_type: str = field(metadata={
+        'required': False,
+        'load_default': '',
+        'allow_none': True
+    })
+
+    @ma.pre_load()
+    def pre_process(self, data, **kwargs):
+        # TODO: JAVA体系不存在user_id, 加载实例会报错
+        if 'userId' not in data:
+            data['userId'] = data['id']
+        return data
 
     @classmethod
     def clone(cls, user: object):
@@ -75,7 +94,6 @@ class TokenUser(BaseDataClass):
             'id': -1,
             'companyId': 1,
             'companyName': '-',
-            'orgId': 1,
             'loginName': '000000',
             'userName': '系统自动生成',
             'userId': -1,

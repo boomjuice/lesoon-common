@@ -55,7 +55,8 @@ class Response:
         self.msg = code.msg
         self.total = 0
         for k, v in kwargs.items():
-            setattr(self, k, v)
+            if v:
+                setattr(self, k, v)
 
     @property
     def code(self):

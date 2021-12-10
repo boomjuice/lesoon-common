@@ -25,7 +25,7 @@ def app():
 
 
 @pytest.fixture
-def db(app):
+def db(app: LesoonFlask):
     """Create database for the tests."""
     _db = app.db
     with app.app_context():
@@ -39,5 +39,5 @@ def db(app):
 
 
 @pytest.fixture
-def test_client(app):
+def test_client(app: LesoonFlask):
     return app.test_client()

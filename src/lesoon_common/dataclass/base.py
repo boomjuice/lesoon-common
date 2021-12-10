@@ -7,7 +7,7 @@ from marshmallow_dataclass import dataclass
 from lesoon_common.model.schema import CamelSchema
 
 # 覆盖生成的Schema基类为CamelSchema
-dataclass = partial(dataclass, base_schema=CamelSchema)
+dataclass = partial(dataclass, base_schema=CamelSchema)  #type:ignore
 
 
 @dataclass
