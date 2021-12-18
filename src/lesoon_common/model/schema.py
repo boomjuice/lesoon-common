@@ -1,4 +1,6 @@
 """ 通用Schema基类模块. """
+import typing as t
+
 import sqlalchemy as sa
 from flask_sqlalchemy import Model
 from marshmallow import EXCLUDE
@@ -60,6 +62,15 @@ class CamelSchema(Schema):
 class SqlaCamelSchema(SQLAlchemySchema, CamelSchema, FixedOperatorSchema):
     # id字段只准序列化,不准反序列读取以防更新数据库id
     id = fields.IntStr(dump_only=True)
+
+    def get_attribute(self, obj: t.Any, attr: str, default: t.Any):
+        model_name = self.Meta.model.__name__
+        if hasattr(obj, model_name) and hasattr(getattr(obj, model_name), attr):
+            # 解决不使用别名进行关联查询的取值问题
+            return super().get_attribute(getattr(obj, model_name), attr,
+                                         default)
+        else:
+            return super().get_attribute(obj, attr, default)
 
     class Meta(CamelSchema.Meta):
         model: Model = None

@@ -4,6 +4,7 @@ from tests.models import User
 from tests.models import UserExt
 
 from lesoon_common.exceptions import ParseError
+from lesoon_common.extensions import db
 from lesoon_common.parse.sqla import parse_filter
 from lesoon_common.parse.sqla import parse_prefix_alias
 from lesoon_common.parse.sqla import parse_related_models
@@ -64,19 +65,24 @@ class TestSQLParser:
         r = parse_suffix_operation('status_ne', 1, User)
         assert expected_expression.compare(r) is True
 
-    def test_operation_like_normal(self):
+    def test_operation_like(self):
         expected_expression = User.status.like('%1%')
         r = parse_suffix_operation('status_like', '1', User)
         assert expected_expression.compare(r) is True
 
-    def test_operation_like(self):
-        expected_expression = User.status.like('%1')
-        r = parse_suffix_operation('status_like', '%1', User)
+    def test_operation_not_like(self):
+        expected_expression = User.status.not_like('%1%')
+        r = parse_suffix_operation('status_notLike', '1', User)
         assert expected_expression.compare(r) is True
 
-    def test_operation_not_like(self):
-        expected_expression = User.status.not_like('%1')
-        r = parse_suffix_operation('status_notLike', '%1', User)
+    def test_operation_suffix_like(self):
+        expected_expression = User.status.like('1%')
+        r = parse_suffix_operation('status_suffixLike', '1', User)
+        assert expected_expression.compare(r) is True
+
+    def test_operation_prefix_like(self):
+        expected_expression = User.status.like('%1')
+        r = parse_suffix_operation('status_prefixLike', '1', User)
         assert expected_expression.compare(r) is True
 
     def test_operation_in(self):
@@ -131,3 +137,10 @@ class TestSQLParser:
         r = parse_related_models(statement=query.statement)
         assert len(r) == 2
         assert r == [User.__table__, UserExt.__table__]
+
+    def test_parse_related_models_subquery(self):
+        subquery = User.query.subquery(name='a')
+        query = db.session.query(subquery)
+        r = parse_related_models(statement=query.statement)
+        assert len(r) == 2
+        assert r == [subquery, User.__table__]

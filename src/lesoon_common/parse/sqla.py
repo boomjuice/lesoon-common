@@ -80,12 +80,24 @@ class LikeOpParser(OpParserABC):
         'ilike': 'ilike',
         'notLike': 'not_like',
         'notIlike': 'not_ilike',
+        'prefixLike': 'prefix_like',
+        'suffixLike': 'suffix_like'
     }
 
     def parse(self):
         attr_op = self.op_dict[self.operate]
-        value = self.value if str(self.value).count('%') else f'%{self.value}%'
-        return getattr(self.column, attr_op)(value)
+        if callable(op_func := getattr(self, attr_op, None)):
+            # 是函数则调用
+            return op_func()
+        else:
+            # 是字符串则直接调用column对象的方法
+            return getattr(self.column, attr_op)(f'%{self.value}%')
+
+    def suffix_like(self):
+        return getattr(self.column, 'like')(f'{self.value}%')
+
+    def prefix_like(self):
+        return getattr(self.column, 'like')(f'%{self.value}')
 
 
 class OpParserFactory:
@@ -105,7 +117,7 @@ class OpParserFactory:
                 return parser(column, operate, value)
         else:
             # 未定义的查询操作
-            raise ParseError(f'无法解析的查询参数 {column}:{value}')
+            raise ParseError(f'无法解析的查询参数 {column}:{operate}:{value}')
 
 
 def parse_multi_condition(
@@ -178,7 +190,7 @@ def parse_prefix_alias(name: str, model: TableType) -> t.Optional[str]:
     if len(name_split) > 2:
         raise ParseError(f'过滤列名不合法: {name}')
     elif len(name_split) == 2:
-        if isinstance(model, (Alias, Annotated)):
+        if isinstance(model, (Alias, Annotated, Subquery)):
             model_alias = model.name
         else:
             model_alias = None
@@ -220,7 +232,7 @@ def parse_model_attribute(
     Returns:
          attr: 字段名对应的Column实例对象
     """
-    if isinstance(model, (Alias, Table, Annotated)):
+    if isinstance(model, (Alias, Table, Annotated, Subquery)):
         attr = getattr(model.columns, udlcase(name), None)
     else:
         attr = getattr(model, udlcase(name), None)
@@ -255,15 +267,20 @@ def parse_related_models(statement: Select) -> t.List[TableType]:
     def recur_related_models(_froms: t.List[t.Any],
                              _related_models: t.List[TableType]):
         for _from in _froms:
-            if isinstance(_from, (Table, Alias)):
+            if isinstance(_from, (Table, Alias, Subquery)):
                 # 表实体
                 _related_models.append(_from)
+                if hasattr(_from, 'element') and isinstance(
+                        _from.element, (Subquery, Select)):
+                    recur_related_models([_from.element], _related_models)
             elif isinstance(_from, _ORMJoin):
                 # join实体
                 recur_related_models([_from.left, _from.right], _related_models)
             elif isinstance(_from, Subquery):
                 # 子查询
-                recur_related_models(_from.element.froms, _related_models)
+                recur_related_models([_from.element], _related_models)
+            elif isinstance(_from, Select):
+                recur_related_models(_from.froms, _related_models)
             else:
                 raise TypeError(f'type:{_from} = {type(_from)}')
 
