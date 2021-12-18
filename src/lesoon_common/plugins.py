@@ -200,7 +200,8 @@ class Bootstrap:
 
         # 读取bootstrap配置
         if not parser.read(self.bootstrap_filename):
-            raise RuntimeError(f'启动配置:{self.bootstrap_filename}不存在')
+            warnings.warn(f'启动配置:{self.bootstrap_filename}不存在', RuntimeWarning)
+            return
         if not all([parser.has_section(sec) for sec in self.fixed_sections]):
             raise RuntimeError(f'必须配置以下sections:{self.fixed_sections}')
 
@@ -297,7 +298,8 @@ class LinkTracer:
         service_name = config.get('SERVICE_NAME')
         if not service_name:
             warnings.warn(
-                'TRACING_JAEGER_CONFIG.SERVICE_NAME为空, jaeger链路跟踪初始化异常')
+                'TRACING_JAEGER_CONFIG.SERVICE_NAME为空, jaeger链路跟踪初始化异常',
+                RuntimeWarning)
             return
 
         # tracer参数

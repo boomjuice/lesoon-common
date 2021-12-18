@@ -256,12 +256,12 @@ class BaseResource(Resource):
         result = self.get_schema().dump(result)
         return result
 
-    def before_remove_many(self, ids: t.List[str]):
+    def before_remove_many(self, ids: t.List[t.Union[str, int]]):
         """批量删除前操作."""
         pass
 
     def _remove_many(self,
-                     ids: t.List[str],
+                     ids: t.List[t.Union[str, int]],
                      filters: t.Optional[SqlaExpList] = None):
         """
         批量刪除.
@@ -278,19 +278,21 @@ class BaseResource(Resource):
             query = query.filter(*filters)
         query.delete(synchronize_session=False)
 
-    def after_remove_many(self, ids: t.List[str]):
+    def after_remove_many(self, ids: t.List[t.Union[str, int]]):
         """批量删除后操作."""
         pass
 
-    def remove_many(self, ids: t.List[str]):
+    def remove_many(self, ids: t.List[t.Union[str, int]]):
         self.before_remove_many(ids)
         self._remove_many(ids)
         self.after_remove_many(ids)
 
-    def remove(self, ids: t.List[str]):
+    def remove(self, ids: t.List[t.Union[str, int]]):
         """删除资源入口."""
         if not ids:
             return
+        if isinstance(ids[0], int):
+            ids = list(map(str, ids))
         self.remove_many(ids)
         self.commit()
 
