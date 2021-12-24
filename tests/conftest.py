@@ -1,7 +1,11 @@
 """Defines fixtures available to all tests."""
 import logging
+import os
+import sys
 
 import pytest
+
+sys.path.extend([os.path.join(os.getcwd(), 'src')])
 
 from lesoon_common import LesoonFlask
 

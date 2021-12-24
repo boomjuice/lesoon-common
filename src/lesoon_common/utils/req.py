@@ -91,7 +91,8 @@ def _get_request_param(param: Param) -> t.Any:
             )
 
 
-def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
+def _parse_func_signature(func: t.Callable[..., t.Any],
+                          camelcase_key: bool) -> t.Dict[str, Param]:
     """解析函数/方法签名.
     示例:
         func = def example(self, user_id: int = None)
@@ -112,7 +113,7 @@ def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
             data_type = arg_param.annotation
 
         param = Param(
-            key=camelcase(arg_name),
+            key=camelcase(arg_name) if camelcase_key else arg_name,
             default=arg_param.default,
             data_type=data_type,
         )
@@ -122,10 +123,9 @@ def _parse_func_signature(func: t.Callable[..., t.Any]) -> t.Dict[str, Param]:
     return param_dict
 
 
-def request_param(
-    param_dict: t.Optional[t.Dict[str, Param]] = None,
-    extend_param_dict: t.Optional[t.Dict[str, Param]] = None,
-):
+def request_param(param_dict: t.Optional[t.Dict[str, Param]] = None,
+                  extend_param_dict: t.Optional[t.Dict[str, Param]] = None,
+                  camelcase_key: bool = True):
     """
     请求参数解析装饰器.
     示例:
@@ -156,7 +156,7 @@ def request_param(
         raise RuntimeError('param_dict 和 extend_param_dict 只可以定义一个')
 
     def wrapper(fn):
-        _param_dict = param_dict or _parse_func_signature(fn)
+        _param_dict = param_dict or _parse_func_signature(fn, camelcase_key)
         if extend_param_dict:
             _param_dict.update(**extend_param_dict)
         fn._param_dict = _param_dict  # type:ignore[attr-defined]
