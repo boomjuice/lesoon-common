@@ -67,8 +67,8 @@ def aes_cbc_decrpyt(key: str, _input: str) -> str:
                     mode=modes.CBC(key_bytes[:16]))
 
     decryptor = cipher.decryptor()
-    dncrpyted_input = decryptor.update(input_bytes) + decryptor.finalize()
+    decrpyted_input = decryptor.update(input_bytes) + decryptor.finalize()
 
     unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
-    unpadder_input = unpadder.update(dncrpyted_input) + unpadder.finalize()
+    unpadder_input = unpadder.update(decrpyted_input) + unpadder.finalize()
     return unpadder_input.decode()
