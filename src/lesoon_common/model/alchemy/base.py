@@ -9,7 +9,7 @@ from sqlalchemy.types import DateTime
 from sqlalchemy.types import String
 
 from lesoon_common.extensions import db
-from lesoon_common.globals import request
+from lesoon_common.globals import current_user
 
 Model = db.Model
 
@@ -25,7 +25,7 @@ class CompanyMixin:
         BIGINT(20),
         nullable=False,
         comment='公司ID',
-        default=lambda: request.user.company_id,
+        default=lambda: current_user.company_id,
     )
 
 
@@ -49,7 +49,7 @@ class FixedOperatorMixin:
         String(20),
         nullable=False,
         comment='创建人',
-        default=lambda: request.user.user_name,
+        default=lambda: current_user.user_name,
     )
     create_time = Column(
         DateTime,
@@ -62,7 +62,7 @@ class FixedOperatorMixin:
         String(20),
         nullable=True,
         comment='修改人',
-        onupdate=lambda: request.user.user_name,
+        onupdate=lambda: current_user.user_name,
     )
     modify_time = Column(DateTime,
                          nullable=True,

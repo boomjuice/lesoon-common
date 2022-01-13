@@ -46,15 +46,16 @@ class HealthCheck:
             self.init_app(app)
 
     def init_app(self, app: Flask):
+        healthcheck_config = app.config.get('HEALTH_CHECK', {})
         for k, v in self._default_config().items():
-            app.config.setdefault(k, v)
+            healthcheck_config.setdefault(k, v)
 
         if sys.platform != 'win32':
             # windows下面无signal.SIGALRM
-            self.err_timeout = app.config['HEALTH_CHECK_TIMEOUT']
-        self.success_ttl = app.config['HEALTH_CHECK_SUCCESS_TTL']
-        self.failure_ttl = app.config['HEALTH_CHECK_FAILURE_TTL']
-        for checker_path in app.config['HEALTH_CHECK_DEFAULT_CHECKERS']:
+            self.err_timeout = healthcheck_config['TIMEOUT']
+        self.success_ttl = healthcheck_config['SUCCESS_TTL']
+        self.failure_ttl = healthcheck_config['FAILURE_TTL']
+        for checker_path in healthcheck_config['DEFAULT_CHECKERS']:
             try:
                 checker = import_string(checker_path)
             except ImportError as e:
@@ -74,18 +75,13 @@ class HealthCheck:
     def _default_config() -> dict:
         return {
             # 每个检查函数的超时时间
-            'HEALTH_CHECK_TIMEOUT':
-                5,
+            'TIMEOUT': 5,
             # 检查通过的缓存时间
-            'HEALTH_CHECK_SUCCESS_TTL':
-                20,
+            'SUCCESS_TTL': 20,
             # 检查失败的缓存时间
-            'HEALTH_CHECK_FAILURE_TTL':
-                5,
+            'FAILURE_TTL': 5,
             # 默认的检查函数列表
-            'HEALTH_CHECK_DEFAULT_CHECKERS': [
-                'lesoon_common.utils.health_check.check_db'
-            ],
+            'DEFAULT_CHECKERS': ['lesoon_common.utils.health_check.check_db'],
         }
 
     def add_check(self, func: t.Callable):
@@ -252,11 +248,11 @@ class LinkTracer:
     def _default_config() -> dict:
         return {
             # 链路跟踪类型
-            'TRACING_TYPE': 'jaeger',
+            'TYPE': 'jaeger',
             # 是否开启链路跟踪
-            'TRACING_ENABLED': True,
+            'ENABLED': True,
             # jaeger跟踪配置
-            'TRACING_JAEGER_CONFIG': {
+            'JAEGER': {
                 # 应用名称
                 'SERVICE_NAME': os.environ.get('APP_NAME'),
                 # 日志输出
@@ -279,26 +275,26 @@ class LinkTracer:
             app: `LesoonFlask`
 
         """
+        tracing_config = app.config.get('TRACING', {})
         for k, v in self._default_config().items():
-            app.config.setdefault(k, v)
+            tracing_config.setdefault(k, v)
 
-        tracing_type = app.config.get('TRACING_TYPE')
+        tracing_type = tracing_config.get('TYPE')
 
         if tracing_type == 'jaeger':
-            self.init_jaeger_tracing(app=app)
+            self.init_jaeger_tracing(app=app, tracing_config=tracing_config)
         else:
             raise RuntimeError(f'不支持的链路跟踪类型:{tracing_type}')
 
-    def init_jaeger_tracing(self, app: Flask):
-        config: dict = app.config.get('TRACING_JAEGER_CONFIG')  # type:ignore
-        for k, v in self._default_config().get('TRACING_JAEGER_CONFIG',
-                                               {}).items():
+    def init_jaeger_tracing(self, app: Flask, tracing_config: dict):
+        config: dict = tracing_config.get('JAEGER')  # type:ignore
+        for k, v in self._default_config().get('JAEGER', {}).items():
             config.setdefault(k, v)
 
         service_name = config.get('SERVICE_NAME')
         if not service_name:
             warnings.warn(
-                'TRACING_JAEGER_CONFIG.SERVICE_NAME为空, jaeger链路跟踪初始化异常',
+                'TRACING.JAEGER_CONFIG.SERVICE_NAME为空, jaeger链路跟踪初始化异常',
                 RuntimeWarning)
             return
 

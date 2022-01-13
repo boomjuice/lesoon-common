@@ -5,7 +5,6 @@ import marshmallow as ma
 
 from lesoon_common.dataclass.base import BaseDataClass
 from lesoon_common.dataclass.base import dataclass
-from lesoon_common.model.schema import CamelSchema
 
 
 @dataclass

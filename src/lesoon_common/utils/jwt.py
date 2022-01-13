@@ -8,20 +8,24 @@ from datetime import timedelta
 from datetime import timezone
 from functools import wraps
 
+from flask import _app_ctx_stack
 from flask import _request_ctx_stack
 from flask import request
 from flask_jwt_extended.config import config
 from flask_jwt_extended.exceptions import NoAuthorizationError
+from flask_jwt_extended.exceptions import UserLookupError
 from flask_jwt_extended.internal_utils import custom_verification_for_token
+from flask_jwt_extended.internal_utils import has_user_lookup
+from flask_jwt_extended.internal_utils import user_lookup
 from flask_jwt_extended.internal_utils import verify_token_not_blocklisted
 from flask_jwt_extended.internal_utils import verify_token_type
 from flask_jwt_extended.utils import decode_token
+from flask_jwt_extended.utils import get_jwt
 from flask_jwt_extended.utils import get_unverified_jwt_headers
 from flask_jwt_extended.view_decorators import _decode_jwt_from_cookies
 from flask_jwt_extended.view_decorators import _decode_jwt_from_headers
 from flask_jwt_extended.view_decorators import _decode_jwt_from_json
 from flask_jwt_extended.view_decorators import _decode_jwt_from_query_string
-from flask_jwt_extended.view_decorators import _load_user
 from flask_jwt_extended.view_decorators import _verify_token_is_fresh
 from jose import jwe
 from jose import jwt
@@ -35,6 +39,28 @@ def get_token():
             'You must call `@jwt_required()` or `verify_jwt_in_request()` '
             'before using this method')
     return token
+
+
+def get_current_user():
+    """
+    In a protected endpoint, this will return the user object for the JWT that
+    is accessing the endpoint.
+
+    This is only usable if :meth:`~flask_jwt_extended.JWTManager.user_lookup_loader`
+    is configured. If the user loader callback is not being used, this will
+    raise an error.
+
+    If no JWT is present due to ``jwt_required(optional=True)``, ``None`` is returned.
+
+    :return:
+        The current user object for the JWT in the current request
+    """
+    jwt_user = getattr(_app_ctx_stack.top, 'jwt_user', None)
+    if jwt_user is None:
+        raise RuntimeError(
+            'You must call `@jwt_required()` or `verify_jwt_in_request()` '
+            'before using this method')
+    return jwt_user
 
 
 def create_system_token():
@@ -64,6 +90,18 @@ def create_system_token():
     return jwe.encrypt(jwt.encode(token_data, secret_key),
                        key=secret_key,
                        cty='JWT').decode()
+
+
+def _load_user(jwt_header, jwt_data):
+    if not has_user_lookup():
+        return None
+
+    identity = jwt_data[config.identity_claim_key]
+    user = user_lookup(jwt_header, jwt_data)
+    if user is None:
+        error_msg = f'user_lookup returned None for {identity}'
+        raise UserLookupError(error_msg, jwt_header, jwt_data)
+    return user
 
 
 def verify_jwt_in_request(optional=False,
@@ -102,14 +140,14 @@ def verify_jwt_in_request(optional=False,
             raise
         _request_ctx_stack.top.jwt = {}
         _request_ctx_stack.top.jwt_header = {}
-        _request_ctx_stack.top.jwt_user = {'loaded_user': None}
+        _app_ctx_stack.top.jwt_user = None
         _request_ctx_stack.top.jwt_location = None
         _request_ctx_stack.top.token = None
         return
 
     # Save these at the very end so that they are only saved in the requet
     # context if the token is valid and all callbacks succeed
-    _request_ctx_stack.top.jwt_user = _load_user(jwt_header, jwt_data)
+    _app_ctx_stack.top.jwt_user = _load_user(jwt_header, jwt_data)
     _request_ctx_stack.top.jwt_header = jwt_header
     _request_ctx_stack.top.jwt = jwt_data
     _request_ctx_stack.top.jwt_location = jwt_location

@@ -10,6 +10,7 @@ from flask_restful import Resource
 from flask_sqlalchemy import get_state
 from flask_sqlalchemy import Model
 from flask_sqlalchemy import Pagination
+from marshmallow import Schema
 from sqlalchemy.orm.session import Session
 
 from lesoon_common.code import ResponseCode
@@ -19,9 +20,9 @@ from lesoon_common.dataclass.resource import ImportParseResult
 from lesoon_common.exceptions import ResourceDefindError
 from lesoon_common.exceptions import ServiceError
 from lesoon_common.globals import request
-from lesoon_common.model.base import BaseCompanyModel
-from lesoon_common.model.base import BaseModel
-from lesoon_common.model.schema import SqlaCamelSchema
+from lesoon_common.model import BaseCompanyModel
+from lesoon_common.model import BaseModel
+from lesoon_common.model import SqlaCamelSchema
 from lesoon_common.parse.sqla import parse_valid_model_attribute
 from lesoon_common.parse.sqla import SqlaExpList
 from lesoon_common.response import error_response
@@ -120,7 +121,7 @@ class BaseResource(Resource):
     def page_get(
             self,
             query: t.Optional[LesoonQuery] = None,
-            schema: t.Optional[SqlaCamelSchema] = None,
+            schema: t.Optional[Schema] = None,
             count_query: t.Optional[LesoonQuery] = None) -> t.Tuple[t.Any, int]:
         """
         通用分页查询.
@@ -131,7 +132,7 @@ class BaseResource(Resource):
             count_query: 总计查询query对象
         """
         _query: LesoonQuery = query or self.select_filter()
-        _schema: SqlaCamelSchema = schema or self.get_schema()
+        _schema: Schema = schema or self.get_schema()
         page_result = _query.paginate(count_query=count_query)
 
         self.before_page_dump(page_result=page_result)

@@ -1,6 +1,5 @@
+from flask.ctx import *  # noqa
 from flask.ctx import _request_ctx_stack  # noqa
-from flask.ctx import has_app_context
-from flask.ctx import has_request_context
 
 
 def has_jwt_context() -> bool:

@@ -12,7 +12,7 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.sql import sqltypes
 
 from lesoon_common.extensions import db
-from lesoon_common.model import fields
+from lesoon_common.model.alchemy import fields
 from lesoon_common.utils.str import camelcase
 
 
@@ -40,10 +40,7 @@ class FixedOperatorSchema:
     update_time = fields.DateTime(dump_only=True)
 
 
-class CamelSchema(Schema):
-    # 将序列化/反序列化的列名调整成驼峰命名
-    def on_bind_field(self, field_name: str, field_obj: fields.Field) -> None:
-        field_obj.data_key = camelcase(field_obj.data_key or field_name)
+class BaseSchema(Schema):
 
     class Meta:
         # 如果load的键没有匹配到定义的field时的操作,
@@ -59,7 +56,13 @@ class CamelSchema(Schema):
         datetimeformat = '%Y-%m-%d %H:%M:%S'
 
 
-class SqlaCamelSchema(SQLAlchemySchema, CamelSchema, FixedOperatorSchema):
+class CamelSchema(BaseSchema):
+    # 将序列化/反序列化的列名调整成驼峰命名
+    def on_bind_field(self, field_name: str, field_obj: fields.Field) -> None:
+        field_obj.data_key = camelcase(field_obj.data_key or field_name)
+
+
+class SqlaSchema(SQLAlchemySchema, BaseSchema, FixedOperatorSchema):
     # id字段只准序列化,不准反序列读取以防更新数据库id
     id = fields.IntStr(dump_only=True)
 
@@ -72,7 +75,7 @@ class SqlaCamelSchema(SQLAlchemySchema, CamelSchema, FixedOperatorSchema):
         else:
             return super().get_attribute(obj, attr, default)
 
-    class Meta(CamelSchema.Meta):
+    class Meta(BaseSchema.Meta):
         model: Model = None
         # sqlalchemy-session
         sqla_session = db.session
@@ -82,6 +85,14 @@ class SqlaCamelSchema(SQLAlchemySchema, CamelSchema, FixedOperatorSchema):
         include_relationships: bool = False
         # model字段映射类
         model_converter: ModelConverter = CustomModelConverter
+
+
+class SqlaAutoSchema(SqlaSchema, SQLAlchemyAutoSchema):
+    pass
+
+
+class SqlaCamelSchema(SqlaSchema, CamelSchema):
+    pass
 
 
 class SqlaCamelAutoSchema(SqlaCamelSchema, SQLAlchemyAutoSchema):

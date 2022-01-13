@@ -9,15 +9,9 @@ from .exceptions import RequestError
 from .exceptions import ServiceError
 from .extensions import ca
 from .extensions import db
-from .extensions import ma
+from .extensions import mg
 from .globals import current_user
 from .globals import request
-from .model import BaseCompanyModel
-from .model import BaseModel
-from .model import CamelSchema
-from .model import fields
-from .model import SqlaCamelAutoSchema
-from .model import SqlaCamelSchema
 from .resource import LesoonMultiResource
 from .resource import LesoonResource
 from .resource import SaasMultiResource

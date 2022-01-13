@@ -1,5 +1,5 @@
 import typing as t
-from dataclasses import dataclass as orignal_dataclass
+from dataclasses import dataclass as original_dataclass
 from dataclasses import field
 
 import marshmallow as ma
@@ -7,7 +7,6 @@ from flask_sqlalchemy import Model
 
 from lesoon_common.dataclass.base import BaseDataClass
 from lesoon_common.dataclass.base import dataclass
-from lesoon_common.model.schema import CamelSchema
 
 
 @dataclass
@@ -78,7 +77,7 @@ class ImportData(BaseDataClass):
         return data
 
 
-@orignal_dataclass
+@original_dataclass
 class ImportParseResult:
     """导入数据解析类."""
 
