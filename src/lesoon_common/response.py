@@ -42,7 +42,7 @@ class Response:
     """
 
     @classmethod
-    def load(cls, data: dict):
+    def load(cls, data: t.Mapping):
         response = cls(code=ResponseCode.Success)
         response.__dict__.update(**data)
         return response

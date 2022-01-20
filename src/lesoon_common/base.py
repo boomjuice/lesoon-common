@@ -28,6 +28,7 @@ from lesoon_common.response import error_response
 from lesoon_common.utils.str import camelcase
 from lesoon_common.view import LesoonView
 from lesoon_common.wrappers import LesoonRequest
+from lesoon_common.wrappers import LesoonTestClient
 
 sqlalchemy_codes = {'pymysql': MysqlCode, 'MySQLdb': MysqlCode}
 
@@ -93,7 +94,11 @@ class LesoonFlask(Flask):
         'hc': hc,
     }
 
+    # request处理类
     request_class = LesoonRequest
+
+    # client处理类
+    test_client_class = LesoonTestClient
 
     # 配置文件路径
     config_path = os.environ.get('CONFIG_PATH', 'config.Config')

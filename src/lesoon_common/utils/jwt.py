@@ -2,6 +2,7 @@
 重写flask_jwt_extended部分模块以支持定制化操作
 """
 import os
+import typing as t
 import uuid
 from datetime import datetime
 from datetime import timedelta
@@ -10,8 +11,9 @@ from functools import wraps
 
 from flask import _app_ctx_stack
 from flask import _request_ctx_stack
+from flask import current_app
 from flask import request
-from flask_jwt_extended.config import config
+from flask_jwt_extended.config import _Config
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.exceptions import UserLookupError
 from flask_jwt_extended.internal_utils import custom_verification_for_token
@@ -31,6 +33,12 @@ from jose import jwe
 from jose import jwt
 from werkzeug.utils import import_string
 
+if t.TYPE_CHECKING:
+    from lesoon_common.dataclass.user import TokenUser
+
+_Config.enable = property(fget=lambda self: current_app.config['JWT_ENABLE'])
+config = _Config()
+
 
 def get_token():
     token = getattr(_request_ctx_stack.top, 'token', None)
@@ -39,28 +47,6 @@ def get_token():
             'You must call `@jwt_required()` or `verify_jwt_in_request()` '
             'before using this method')
     return token
-
-
-def get_current_user():
-    """
-    In a protected endpoint, this will return the user object for the JWT that
-    is accessing the endpoint.
-
-    This is only usable if :meth:`~flask_jwt_extended.JWTManager.user_lookup_loader`
-    is configured. If the user loader callback is not being used, this will
-    raise an error.
-
-    If no JWT is present due to ``jwt_required(optional=True)``, ``None`` is returned.
-
-    :return:
-        The current user object for the JWT in the current request
-    """
-    jwt_user = getattr(_app_ctx_stack.top, 'jwt_user', None)
-    if jwt_user is None:
-        raise RuntimeError(
-            'You must call `@jwt_required()` or `verify_jwt_in_request()` '
-            'before using this method')
-    return jwt_user
 
 
 def create_system_token():
@@ -90,6 +76,32 @@ def create_system_token():
     return jwe.encrypt(jwt.encode(token_data, secret_key),
                        key=secret_key,
                        cty='JWT').decode()
+
+
+def get_current_user() -> 'TokenUser':
+    """
+    In a protected endpoint, this will return the user object for the JWT that
+    is accessing the endpoint.
+
+    This is only usable if :meth:`~flask_jwt_extended.JWTManager.user_lookup_loader`
+    is configured. If the user loader callback is not being used, this will
+    raise an error.
+
+    If no JWT is present due to ``jwt_required(optional=True)``, ``None`` is returned.
+
+    :return:
+        The current user object for the JWT in the current request
+    """
+    jwt_user = getattr(_app_ctx_stack.top, 'jwt_user', None)
+    if jwt_user is None:
+        raise RuntimeError(
+            'You must call `@jwt_required()` or `verify_jwt_in_request()` '
+            'before using this method')
+    return jwt_user
+
+
+def set_current_user(user: 'TokenUser'):
+    _app_ctx_stack.top.jwt_user = user
 
 
 def _load_user(jwt_header, jwt_data):
@@ -187,7 +199,8 @@ def jwt_required(optional=False, fresh=False, refresh=False, locations=None):
 
         @wraps(fn)
         def decorator(*args, **kwargs):
-            verify_jwt_in_request(optional, fresh, refresh, locations)
+            if config.enable:
+                verify_jwt_in_request(optional, fresh, refresh, locations)
 
             return fn(*args, **kwargs)
 

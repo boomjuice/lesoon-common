@@ -8,6 +8,7 @@ from flask.globals import current_app
 from flask.globals import request
 from flask.helpers import make_response
 from flask.templating import render_template_string
+from flask.testing import FlaskClient
 from flask.wrappers import Request
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
@@ -16,6 +17,7 @@ from flask_sqlalchemy import Pagination
 from jose import jwe
 from werkzeug.utils import cached_property
 
+from lesoon_common.globals import current_user
 from lesoon_common.parse.req import extract_sort_arg
 from lesoon_common.parse.req import extract_where_arg
 from lesoon_common.parse.sqla import parse_multi_condition
@@ -23,6 +25,7 @@ from lesoon_common.parse.sqla import parse_related_models
 from lesoon_common.response import error_response
 from lesoon_common.response import ResponseCode
 from lesoon_common.utils.jwt import get_token
+from lesoon_common.utils.str import camelcase
 
 
 class LesoonRequest(Request):
@@ -66,8 +69,6 @@ class LesoonRequest(Request):
 
     @cached_property
     def user(self):
-        from .globals import current_user
-
         return current_user
 
     @cached_property
@@ -154,6 +155,7 @@ class LesoonJwt(JWTManager):
 
     @staticmethod
     def _set_default_configuration_options(app: Flask):
+        app.config.setdefault('JWT_ENABLE', False)
         app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES',
                               datetime.timedelta(days=30))
         app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
@@ -216,6 +218,35 @@ class LesoonJwt(JWTManager):
                                                     expires_delta, headers)
         secret = current_app.config.get('JWT_SECRET_KEY')
         return jwe.encrypt(jwt_token, key=secret, cty='JWT').decode()
+
+
+class LesoonTestClient(FlaskClient):
+
+    def _camelcase_key(self, data: t.Mapping):
+        return {camelcase(k): v for k, v in data.items()}
+
+    def _convert_request_kwargs(self, kw: dict):
+        if 'query_string' in kw and isinstance(kw['query_string'], t.Mapping):
+            kw['query_string'] = self._camelcase_key(kw['query_string'])
+
+        if 'json' in kw and isinstance(kw['json'], t.Mapping):
+            kw['json'] = self._camelcase_key(kw['json'])
+
+    def get(self, *args: t.Any, **kw: t.Any):
+        self._convert_request_kwargs(kw=kw)
+        return super().get(*args, **kw)
+
+    def post(self, *args: t.Any, **kw: t.Any):
+        self._convert_request_kwargs(kw=kw)
+        return super().post(*args, **kw)
+
+    def put(self, *args: t.Any, **kw: t.Any):
+        self._convert_request_kwargs(kw=kw)
+        return super().put(*args, **kw)
+
+    def delete(self, *args: t.Any, **kw: t.Any):
+        self._convert_request_kwargs(kw=kw)
+        return super().delete(*args, **kw)
 
 
 class LesoonDebugTool(DebugToolbarExtension):

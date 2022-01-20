@@ -140,10 +140,11 @@ class BaseResource(Resource):
         results = _schema.dump(page_result.items, many=True)
         return results, page_result.total
 
-    def before_create_one(self, obj: BaseModel):
+    def before_create_one(self, data: dict, obj: BaseModel):
         """
         新增前操作.
         Args:
+             data: `self.__model__`对应的字典
              obj: `self.__model__`对应实例对象
 
         """
@@ -172,20 +173,22 @@ class BaseResource(Resource):
             obj: `self.__model__`实例对象
         """
         obj = self.get_schema().load(data)
-        self.before_create_one(obj)
+        self.before_create_one(data, obj)
         obj = self._create_one(obj)
         self.after_create_one(data, obj)
         return obj
 
-    def before_create_many(self, objs: t.List[BaseModel]):
+    def before_create_many(self, data_list: t.List[dict],
+                           objs: t.List[BaseModel]):
         """
         批量新增前操作.
         Args:
+            data_list: `self.__model__`对应的字典列表
             objs: `self.__model__`实例对象列表
 
         """
-        for obj in objs:
-            self.before_create_one(obj)
+        for data, obj in zip(data_list, objs):
+            self.before_create_one(data, obj)
 
     def _create_many(self, objs: t.List[BaseModel]):
         self.session.add_all(objs)
@@ -213,7 +216,7 @@ class BaseResource(Resource):
             objs: `self.__model__`实例对象列表
         """
         objs = self.get_schema().load(data_list, many=True)
-        self.before_create_many(objs)
+        self.before_create_many(data_list, objs)
         objs = self._create_many(objs)
         self.after_create_many(data_list, objs)
         return objs
@@ -235,10 +238,8 @@ class BaseResource(Resource):
         _q = self.get_query(add_sort=False).filter(
             self.__model__.id == data.get('id')).first()
         if not _q:
-            obj = None
-        else:
-            obj = self.get_schema().load(data, partial=True, instance=_q)
-        return obj
+            return None
+        return self.get_schema().load(data, partial=True, instance=_q)
 
     def update_many(self, data_list: t.List[dict]):
         """批量更新资源."""
