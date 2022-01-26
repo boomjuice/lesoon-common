@@ -5,6 +5,7 @@ from mongoengine import fields
 
 from lesoon_common.extensions import mg
 from lesoon_common.globals import current_user
+from lesoon_common.model.mongoengine.wrappers import LesoonQuerySet
 
 Document = mg.Document
 
@@ -40,6 +41,7 @@ class BaseDocument(Document, FixedOperatorMixin):  # type:ignore
     meta = {
         'abstract': True,
         'indexes': ['create_time', 'modify_time'],
+        'queryset_class': LesoonQuerySet,
         'auto_create_index': True,
     }
 
@@ -58,10 +60,11 @@ class BaseDocument(Document, FixedOperatorMixin):  # type:ignore
     ):
         self.modifier = current_user.user_name
         self.modify_time = datetime.utcnow()
-        return super().save(force_insert, validate, clean, write_concern,
-                            cascade, cascade_kwargs, _refs, save_condition,
-                            signal_kwargs, **kwargs)
+        return super(Document,
+                     self).save(force_insert, validate, clean, write_concern,
+                                cascade, cascade_kwargs, _refs, save_condition,
+                                signal_kwargs, **kwargs)
 
 
 class BaseCompanyDocument(BaseDocument, CompanyMixin):
-    meta = {'abstract': True}
+    pass

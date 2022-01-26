@@ -94,19 +94,21 @@ class Response:
     def result(self):
         return self.data or self.rows or None
 
+    @result.setter
+    def result(self, value: t.Any):
+        if isinstance(value, list):
+            self.rows = value
+        elif isinstance(value, dict):
+            self.data = value
+        else:
+            self.data = value
+
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items() if v}
 
 
 def success_response(result: t.Any = None, **kwargs) -> dict:
-    resp = Response(code=ResponseCode.Success, **kwargs)
-    if result:
-        if isinstance(result, list):
-            resp.rows = result
-        elif isinstance(result, dict):
-            resp.data = result
-        else:
-            resp.data = result
+    resp = Response(code=ResponseCode.Success, result=result, **kwargs)
     return resp.to_dict()
 
 

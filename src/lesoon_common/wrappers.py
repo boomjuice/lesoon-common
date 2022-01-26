@@ -12,9 +12,10 @@ from flask.testing import FlaskClient
 from flask.wrappers import Request
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
+from flask_mongoengine import BaseQuerySet
 from flask_sqlalchemy import BaseQuery
-from flask_sqlalchemy import Pagination
 from jose import jwe
+from pymongo.monitoring import CommandListener
 from werkzeug.utils import cached_property
 
 from lesoon_common.globals import current_user
@@ -77,59 +78,6 @@ class LesoonRequest(Request):
             return get_token()
         else:
             return ''
-
-
-class LesoonQuery(BaseQuery):
-
-    def paginate(
-        self,
-        if_page: t.Optional[bool] = None,
-        page: t.Optional[int] = None,
-        per_page: t.Optional[int] = None,
-        count_query: t.Optional[BaseQuery] = None,
-    ):
-        """
-        执行分页查询.
-
-        Args:
-            if_page: 是否分页
-            page: 页码
-            per_page: 页大小
-            count_query: 总计查询对象,默认为self.count()
-
-        """
-        page = page or request.page  # type:ignore
-        per_page = per_page or request.page_size  # type:ignore
-        if_page = if_page or request.if_page  # type:ignore
-        count_query = count_query or self
-
-        if if_page:
-            items = self.limit(per_page).offset((page - 1) * per_page).all()
-        else:
-            items = self.all()
-        total = count_query.order_by(None).count()
-
-        return Pagination(self, page, per_page, total, items)
-
-    def with_request_condition(self,
-                               add_where: bool = True,
-                               add_sort: bool = True):
-        """注入请求查询过滤条件.
-        : 将请求参数转化成sqlalchemy语法,注入Query对象
-        : 注意 此方法只能在Flask请求上下文中调用
-        """
-        if any([add_where, add_sort]):
-            related_models = parse_related_models(self.statement)
-            where_list, sort_list = parse_multi_condition(
-                request.where.copy(),  # type:ignore
-                request.sort.copy(),  # type:ignore
-                related_models,
-            )
-            if add_where:
-                self = self.filter(*where_list)
-            if add_sort:
-                self = self.order_by(*sort_list)
-        return self
 
 
 class LesoonJwt(JWTManager):
@@ -222,15 +170,24 @@ class LesoonJwt(JWTManager):
 
 class LesoonTestClient(FlaskClient):
 
+    def __init__(self,
+                 *args: t.Any,
+                 camel: bool = False,
+                 **kwargs: t.Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.camel = camel
+
     def _camelcase_key(self, data: t.Mapping):
         return {camelcase(k): v for k, v in data.items()}
 
     def _convert_request_kwargs(self, kw: dict):
-        if 'query_string' in kw and isinstance(kw['query_string'], t.Mapping):
-            kw['query_string'] = self._camelcase_key(kw['query_string'])
+        if self.camel:
+            if 'query_string' in kw and isinstance(kw['query_string'],
+                                                   t.Mapping):
+                kw['query_string'] = self._camelcase_key(kw['query_string'])
 
-        if 'json' in kw and isinstance(kw['json'], t.Mapping):
-            kw['json'] = self._camelcase_key(kw['json'])
+            if 'json' in kw and isinstance(kw['json'], t.Mapping):
+                kw['json'] = self._camelcase_key(kw['json'])
 
     def get(self, *args: t.Any, **kw: t.Any):
         self._convert_request_kwargs(kw=kw)
@@ -287,3 +244,23 @@ class LesoonDebugTool(DebugToolbarExtension):
 
         app.after_request(json_to_html)
         super().init_app(app)
+
+
+class CommandLogger(CommandListener):
+
+    def started(self, event):
+        current_app.logger.debug('Command {0.command_name} with request id '
+                                 '{0.request_id} started on server '
+                                 '{0.connection_id}'.format(event))
+
+    def succeeded(self, event):
+        current_app.logger.debug('Command {0.command_name} with request id '
+                                 '{0.request_id} on server {0.connection_id} '
+                                 'succeeded in {0.duration_micros} '
+                                 'microseconds'.format(event))
+
+    def failed(self, event):
+        current_app.logger.debug('Command {0.command_name} with request id '
+                                 '{0.request_id} on server {0.connection_id} '
+                                 'failed in {0.duration_micros} '
+                                 'microseconds'.format(event))

@@ -3,8 +3,6 @@ import typing as t
 
 import sqlalchemy as sa
 from flask_sqlalchemy import Model
-from marshmallow import EXCLUDE
-from marshmallow import Schema
 from marshmallow_sqlalchemy import ModelConverter
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy import SQLAlchemySchema
@@ -13,7 +11,8 @@ from sqlalchemy.sql import sqltypes
 
 from lesoon_common.extensions import db
 from lesoon_common.model.alchemy import fields
-from lesoon_common.utils.str import camelcase
+from lesoon_common.schema import BaseSchema
+from lesoon_common.schema import CamelSchema
 
 
 class CustomModelConverter(ModelConverter):
@@ -38,28 +37,6 @@ class FixedOperatorSchema:
     create_time = fields.DateTime(dump_only=True)
     modify_time = fields.DateTime(dump_only=True)
     update_time = fields.DateTime(dump_only=True)
-
-
-class BaseSchema(Schema):
-
-    class Meta:
-        # 如果load的键没有匹配到定义的field时的操作,
-        # RAISE: 如果存在未知key,引发ValiadationError
-        # EXCLUDE: 忽略未知key
-        # INCLUDE: 包含未知可以,即使时未定义的field
-        unknown: str = EXCLUDE
-        # 排除字段
-        exclude: list = []
-        # 保持有序
-        ordered = True
-        # 时间格式
-        datetimeformat = '%Y-%m-%d %H:%M:%S'
-
-
-class CamelSchema(BaseSchema):
-    # 将序列化/反序列化的列名调整成驼峰命名
-    def on_bind_field(self, field_name: str, field_obj: fields.Field) -> None:
-        field_obj.data_key = camelcase(field_obj.data_key or field_name)
 
 
 class SqlaSchema(SQLAlchemySchema, BaseSchema, FixedOperatorSchema):

@@ -8,9 +8,11 @@ from sqlalchemy import String
 from lesoon_common.model import fields
 from lesoon_common.model import SqlaCamelAutoSchema
 from lesoon_common.model.alchemy.base import Model
+from lesoon_common.model.alchemy.wrappers import LesoonQuery
 
 
 class User(Model):
+    query_class = LesoonQuery
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
     login_name = Column(String, unique=True, nullable=False)

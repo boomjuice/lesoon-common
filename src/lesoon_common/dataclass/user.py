@@ -4,6 +4,7 @@ import marshmallow as ma
 
 from lesoon_common.dataclass.base import BaseDataClass
 from lesoon_common.dataclass.base import dataclass
+from lesoon_common.utils.str import camelcase
 
 
 @dataclass
@@ -12,11 +13,23 @@ class TokenUser(BaseDataClass):
     # 用户id
     id: int
     # 公司id
-    company_id: int
+    company_id: int = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': None
+    })
     # 公司编码
-    company_code: str = field(metadata={'required': False, 'load_default': ''})
+    company_code: str = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': None
+    })
     # 公司名称
-    company_name: str = field(metadata={'required': False, 'load_default': ''})
+    company_name: str = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': None
+    })
     # 登录名
     login_name: str
     # 用户名称
@@ -93,10 +106,22 @@ class TokenUser(BaseDataClass):
         system_user = {
             'id': -1,
             'companyId': 1,
-            'companyName': '-',
-            'loginName': '000000',
+            'loginName': '-',
             'userName': '系统自动生成',
             'userId': -1,
-            'ifAdmin': True,
+            'ifAdmin': True
         }
         return cls.load(system_user)
+
+    @classmethod
+    def new(cls, **kwargs):
+        anonymous_user = {
+            'id': -1,
+            'loginName': '-',
+            'userName': '系统自动生成',
+            'userId': -1,
+            'ifAdmin': True
+        }
+        for k, v in kwargs.items():
+            anonymous_user[camelcase(k)] = v
+        return cls.load(anonymous_user)

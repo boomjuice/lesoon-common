@@ -12,6 +12,8 @@ from .extensions import db
 from .extensions import mg
 from .globals import current_user
 from .globals import request
+from .model import LesoonQuery
+from .model import LesoonQuerySet
 from .resource import LesoonMultiResource
 from .resource import LesoonResource
 from .resource import SaasMultiResource
@@ -25,7 +27,6 @@ from .utils.req import request_param
 from .view import LesoonMultiView
 from .view import LesoonView
 from .view import route
-from .wrappers import LesoonQuery
 from .wrappers import LesoonRequest
 
 __version__ = '0.0.2'

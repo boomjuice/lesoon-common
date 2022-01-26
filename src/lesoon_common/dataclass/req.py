@@ -17,6 +17,8 @@ class PageParam(BaseDataClass):
     page_size: int = 25
     # 过滤条件
     where: t.Optional[dict] = None
+    # 排序条件
+    sort: t.Optional[dict] = None
 
 
 @dataclass

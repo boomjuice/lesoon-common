@@ -121,6 +121,7 @@ class LesoonFlask(Flask):
             # 启动引导
             Bootstrap(app=self)
         self._init_flask()
+        self.url_map.strict_slashes = False
 
     def init_config(self, config: t.Optional[object] = None):
         try:
@@ -129,10 +130,10 @@ class LesoonFlask(Flask):
             raise ConfigError(f'加载配置异常:{e}')
 
     def _init_flask(self):
+        self._init_logger()
         self._init_extensions()
         self._init_errorhandler()
         self._init_commands()
-        self._init_logger()
 
     def _init_extensions(self):
         for ext_name, ext in self.registered_extensions.items():
@@ -147,9 +148,19 @@ class LesoonFlask(Flask):
         pass
 
     def _init_logger(self):
+        # app default logger
         handler = logging.StreamHandler(sys.stdout)
         if not self.logger.handlers:
             self.logger.addHandler(handler)
+
+        # pymongo command logger
+        if 'MONGODB_SETTINGS' in self.config:
+            try:
+                from pymongo.monitoring import register
+                from lesoon_common.wrappers import CommandLogger
+                register(CommandLogger())
+            except Exception as e:
+                self.logger.exception(f'Mongo日志器初始化异常：{e}')
 
 
 class LesoonApi(Api):

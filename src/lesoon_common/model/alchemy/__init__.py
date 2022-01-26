@@ -4,8 +4,8 @@ from .base import BaseModel
 from .base import CommonMixin
 from .base import RemarkMixin
 from .base import StatusMixin
-from .schema import CamelSchema
 from .schema import SqlaAutoSchema
 from .schema import SqlaCamelAutoSchema
 from .schema import SqlaCamelSchema
 from .schema import SqlaSchema
+from .wrappers import LesoonQuery

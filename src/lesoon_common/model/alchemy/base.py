@@ -1,8 +1,10 @@
 """ 通用Model基类模块. """
+import typing as t
 from datetime import datetime
 
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.dialects.mysql import TINYINT
+from sqlalchemy.sql.expression import BinaryExpression
 from sqlalchemy.sql.expression import text
 from sqlalchemy.sql.schema import Column
 from sqlalchemy.types import DateTime
@@ -10,6 +12,7 @@ from sqlalchemy.types import String
 
 from lesoon_common.extensions import db
 from lesoon_common.globals import current_user
+from lesoon_common.model.alchemy.wrappers import LesoonQuery
 
 Model = db.Model
 
@@ -79,6 +82,8 @@ class FixedOperatorMixin:
 
 class BaseModel(IdModel, FixedOperatorMixin):
     __abstract__ = True
+
+    query_class = LesoonQuery
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
