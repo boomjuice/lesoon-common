@@ -5,7 +5,7 @@ from mongoengine import fields
 
 from lesoon_common.extensions import mg
 from lesoon_common.globals import current_user
-from lesoon_common.model.mongoengine.wrappers import LesoonQuerySet
+from lesoon_common.wrappers import LesoonQuerySet
 
 Document = mg.Document
 

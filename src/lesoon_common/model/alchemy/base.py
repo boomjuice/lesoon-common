@@ -12,7 +12,6 @@ from sqlalchemy.types import String
 
 from lesoon_common.extensions import db
 from lesoon_common.globals import current_user
-from lesoon_common.model.alchemy.wrappers import LesoonQuery
 
 Model = db.Model
 
@@ -82,8 +81,6 @@ class FixedOperatorMixin:
 
 class BaseModel(IdModel, FixedOperatorMixin):
     __abstract__ = True
-
-    query_class = LesoonQuery
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

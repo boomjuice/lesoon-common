@@ -15,7 +15,7 @@ from lesoon_common.schema import BaseSchema
 from lesoon_common.schema import CamelSchema
 
 
-class CustomModelConverter(ModelConverter):
+class SqlaModelConverter(ModelConverter):
     SQLA_TYPE_MAPPING = {
         sa.Enum: fields.Field,
         sa.JSON: fields.Raw,
@@ -27,6 +27,7 @@ class CustomModelConverter(ModelConverter):
         mysql.DATETIME: fields.DateTime,
         mysql.BIGINT: fields.IntStr,
         sqltypes.BigInteger: fields.IntStr,
+        sqltypes.NullType: fields.Str
     }
 
 
@@ -61,7 +62,7 @@ class SqlaSchema(SQLAlchemySchema, BaseSchema, FixedOperatorSchema):
         # 是否包含Model的关联关系
         include_relationships: bool = False
         # model字段映射类
-        model_converter: ModelConverter = CustomModelConverter
+        model_converter: t.Type[ModelConverter] = SqlaModelConverter
 
 
 class SqlaAutoSchema(SqlaSchema, SQLAlchemyAutoSchema):

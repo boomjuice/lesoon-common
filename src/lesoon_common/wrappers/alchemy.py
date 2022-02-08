@@ -8,9 +8,6 @@ from lesoon_common.globals import request
 from lesoon_common.parse.sqla import parse_multi_condition
 from lesoon_common.parse.sqla import parse_related_models
 
-if t.TYPE_CHECKING:
-    from lesoon_common.model.alchemy.base import BaseModel
-
 
 class LesoonQuery(BaseQuery):
 

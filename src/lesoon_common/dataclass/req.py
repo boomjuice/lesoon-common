@@ -15,10 +15,10 @@ class PageParam(BaseDataClass):
     page: int = 1
     # 页面大小
     page_size: int = 25
-    # 过滤条件
-    where: t.Optional[dict] = None
-    # 排序条件
-    sort: t.Optional[dict] = None
+    # 过滤条件 解析时为元组,调用时为字典
+    where: t.Any = None
+    # 排序条件 解析时为元组,调用时为字典
+    sort: t.Any = None
 
 
 @dataclass

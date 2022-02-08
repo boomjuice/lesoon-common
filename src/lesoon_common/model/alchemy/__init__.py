@@ -8,4 +8,3 @@ from .schema import SqlaAutoSchema
 from .schema import SqlaCamelAutoSchema
 from .schema import SqlaCamelSchema
 from .schema import SqlaSchema
-from .wrappers import LesoonQuery

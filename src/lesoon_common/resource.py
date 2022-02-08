@@ -22,7 +22,6 @@ from lesoon_common.exceptions import ServiceError
 from lesoon_common.globals import request
 from lesoon_common.model import BaseCompanyModel
 from lesoon_common.model import BaseModel
-from lesoon_common.model import LesoonQuery
 from lesoon_common.model import SqlaCamelSchema
 from lesoon_common.parse.sqla import parse_valid_model_attribute
 from lesoon_common.parse.sqla import SqlaExpList
@@ -31,6 +30,7 @@ from lesoon_common.response import success_response
 from lesoon_common.utils.jwt import jwt_required
 from lesoon_common.utils.resource import parse_import_data
 from lesoon_common.utils.str import udlcase
+from lesoon_common.wrappers import LesoonQuery
 
 
 @contextmanager

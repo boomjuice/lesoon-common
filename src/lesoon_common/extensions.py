@@ -11,8 +11,9 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from lesoon_common.plugins import HealthCheck
 from lesoon_common.wrappers import LesoonDebugTool
 from lesoon_common.wrappers import LesoonJwt
+from lesoon_common.wrappers import LesoonQuery
 
-db = SQLAlchemy(session_options={'autocommit': True})
+db = SQLAlchemy(query_class=LesoonQuery, session_options={'autocommit': True})
 mg = MongoEngine()
 ma = Marshmallow()
 ca = Cache()

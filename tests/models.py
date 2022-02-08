@@ -8,7 +8,7 @@ from sqlalchemy import String
 from lesoon_common.model import fields
 from lesoon_common.model import SqlaCamelAutoSchema
 from lesoon_common.model.alchemy.base import Model
-from lesoon_common.model.alchemy.wrappers import LesoonQuery
+from lesoon_common.wrappers import LesoonQuery
 
 
 class User(Model):
