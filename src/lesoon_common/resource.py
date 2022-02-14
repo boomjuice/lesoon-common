@@ -544,8 +544,9 @@ class SaasResource(LesoonResource):
 
     def get_query(self, add_where=True, add_sort=True) -> LesoonQuery:
         query = super().get_query(add_where=add_where, add_sort=add_sort)
-        query = query.filter(
-            self.__model__.company_id == request.user.company_id)
+        if request.user.company_id:
+            query = query.filter(
+                self.__model__.company_id == request.user.company_id)
         return query
 
     def _create_one(self, obj: BaseCompanyModel):

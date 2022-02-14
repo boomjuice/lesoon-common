@@ -10,11 +10,17 @@ current_datetime = partial(datetime.strptime,
                            format='%Y-%m-%d %H:%M:%S')
 
 
-class BaseFactory(factory.alchemy.SQLAlchemyModelFactory):
+class SqlaFatory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         abstract = True
         sqlalchemy_session = db.session
+
+
+class BaseFactory(SqlaFatory):
+
+    class Meta:
+        abstract = True
 
     id = factory.Sequence(lambda n: n + 1)
     creator = '单元测试'
@@ -22,7 +28,7 @@ class BaseFactory(factory.alchemy.SQLAlchemyModelFactory):
     update_time = factory.Faker('date_time')
 
 
-class BaseCompanyFactory(BaseFactory):
+class BaseCompanyFactory(SqlaFatory):
 
     class Meta:
         abstract = True

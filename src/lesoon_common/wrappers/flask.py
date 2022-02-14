@@ -19,6 +19,8 @@ from lesoon_common.response import Response
 from lesoon_common.utils.jwt import get_token
 from lesoon_common.utils.str import camelcase
 
+ResponseType = t.Union[Response, FlaskResponse]
+
 
 class LesoonRequest(Request):
     PAGE_SIZE_DEFAULT = 25
@@ -97,6 +99,8 @@ class LesoonTestClient(FlaskClient):
     def open(self, *args, **kwargs):
         response = super().open(*args, **kwargs)
         if self.load_response:
+            if response.status_code != 200:
+                raise RuntimeError
             response = Response.load(response.json)
             if response.code != ResponseCode.Success.code:
                 print(f'接口调用异常，返回结果:{response.to_dict()}')
@@ -105,21 +109,21 @@ class LesoonTestClient(FlaskClient):
         else:
             return response
 
-    def get(self, *args: t.Any, **kw: t.Any):
+    def get(self, *args: t.Any, **kw: t.Any) -> ResponseType:  # type:ignore
         self._convert_request_kwargs(kw=kw)
-        return super().get(*args, **kw)
+        return super().get(*args, **kw)  # type:ignore
 
-    def post(self, *args: t.Any, **kw: t.Any):
+    def post(self, *args: t.Any, **kw: t.Any) -> ResponseType:  # type:ignore
         self._convert_request_kwargs(kw=kw)
-        return super().post(*args, **kw)
+        return super().post(*args, **kw)  # type:ignore
 
-    def put(self, *args: t.Any, **kw: t.Any):
+    def put(self, *args: t.Any, **kw: t.Any) -> ResponseType:  # type:ignore
         self._convert_request_kwargs(kw=kw)
-        return super().put(*args, **kw)
+        return super().put(*args, **kw)  # type:ignore
 
-    def delete(self, *args: t.Any, **kw: t.Any):
+    def delete(self, *args: t.Any, **kw: t.Any) -> ResponseType:  # type:ignore
         self._convert_request_kwargs(kw=kw)
-        return super().delete(*args, **kw)
+        return super().delete(*args, **kw)  # type:ignore
 
 
 class LesoonDebugTool(DebugToolbarExtension):

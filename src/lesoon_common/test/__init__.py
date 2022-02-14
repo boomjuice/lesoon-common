@@ -3,6 +3,7 @@ import factory as ft
 from .base import UnittestBase
 from .factory import BaseCompanyFactory
 from .factory import BaseFactory
+from .factory import SqlaFatory
 from .mock import mock_current_user
 from .mock import mock_schema_dict_class
 
