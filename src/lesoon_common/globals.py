@@ -3,6 +3,7 @@ from functools import partial
 
 from flask.globals import _app_ctx_stack
 from flask.globals import _lookup_req_object
+from flask.globals import current_app
 from werkzeug.local import LocalProxy
 
 from lesoon_common.utils.jwt import get_current_user

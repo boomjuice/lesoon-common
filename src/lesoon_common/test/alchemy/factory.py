@@ -28,7 +28,7 @@ class BaseFactory(SqlaFatory):
     update_time = factory.Faker('date_time')
 
 
-class BaseCompanyFactory(SqlaFatory):
+class BaseCompanyFactory(BaseFactory):
 
     class Meta:
         abstract = True

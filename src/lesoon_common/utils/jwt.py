@@ -49,10 +49,8 @@ def get_token():
     return token
 
 
-def create_system_token():
-    """生成系统间调用token.
-    注意: 该token具有管理员权限
-    """
+def create_token(user: t.Optional['TokenUser'] = None):
+    """生成系统间调用token."""
     from lesoon_common.dataclass.user import TokenUser
     from lesoon_common.base import LesoonFlask
 
@@ -61,7 +59,7 @@ def create_system_token():
     secret_key = config.JWT_SECRET_KEY
     expires_delta = config.JWT_ACCESS_TOKEN_EXPIRES
 
-    user: TokenUser = TokenUser.system_default()
+    user: TokenUser = user or TokenUser.new()
 
     now = datetime.now(timezone.utc)
 

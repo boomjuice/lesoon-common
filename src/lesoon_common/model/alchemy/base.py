@@ -12,6 +12,7 @@ from sqlalchemy.types import String
 
 from lesoon_common.extensions import db
 from lesoon_common.globals import current_user
+from lesoon_common.utils.model import get_distribute_id
 
 Model = db.Model
 
@@ -19,7 +20,11 @@ Model = db.Model
 class IdModel(Model):  # type:ignore
     __abstract__ = True
 
-    id = Column(BIGINT(20), primary_key=True, autoincrement=True, comment='ID')
+    id = Column(BIGINT(20),
+                primary_key=True,
+                autoincrement=True,
+                comment='ID',
+                default=get_distribute_id)
 
 
 class CompanyMixin:

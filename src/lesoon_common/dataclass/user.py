@@ -91,7 +91,13 @@ class TokenUser(BaseDataClass):
     def pre_process(self, data, **kwargs):
         # TODO: JAVA体系不存在user_id, 加载实例会报错
         if 'userId' not in data:
-            data['userId'] = data['id']
+            data['userId'] = data.get('id', -1)
+        return data
+
+    @ma.post_dump()
+    def dump_process(self, data, **kwargs):
+        # TODO: JAVA体系中id为user_id
+        data['id'] = data['userId']
         return data
 
     @classmethod

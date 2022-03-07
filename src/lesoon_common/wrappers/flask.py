@@ -24,7 +24,7 @@ ResponseType = t.Union[Response, FlaskResponse]
 
 class LesoonRequest(Request):
     PAGE_SIZE_DEFAULT = 25
-    PAGE_SIZE_LIMIT = 1000
+    PAGE_SIZE_LIMIT = 100000
 
     @cached_property
     def where(self) -> t.Dict[str, t.Any]:
@@ -43,16 +43,22 @@ class LesoonRequest(Request):
 
     @cached_property
     def page(self):
-        page = self.args.get('page', default=1, type=int)
+        page = self.args.get('page', type=int)
+        if not page:
+            # TODO: Java导入导出中心旧分页参数适配
+            page = self.args.get('page.pn', default=1, type=int)
         if page < 1:
             page = 1
         return page
 
     @cached_property
     def page_size(self):
-        page_size = self.args.get('pageSize',
-                                  default=self.__class__.PAGE_SIZE_DEFAULT,
-                                  type=int)
+        page_size = self.args.get('pageSize', type=int)
+        if not page_size:
+            # TODO: Java导入导出中心旧分页参数适配
+            page_size = self.args.get('page.size',
+                                      default=self.__class__.PAGE_SIZE_DEFAULT,
+                                      type=int)
 
         if page_size < 0:
             page_size = self.__class__.PAGE_SIZE_DEFAULT

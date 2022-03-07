@@ -250,11 +250,11 @@ class LinkTracer:
             # 链路跟踪类型
             'TYPE': 'jaeger',
             # 是否开启链路跟踪
-            'ENABLED': True,
+            'ENABLED': False,
             # jaeger跟踪配置
             'JAEGER': {
                 # 应用名称
-                'SERVICE_NAME': os.environ.get('APP_NAME'),
+                'SERVICE_NAME': 'tracer-default',
                 # 日志输出
                 'LOGGING': True,
                 # 生成128位trace_id
@@ -279,12 +279,12 @@ class LinkTracer:
         for k, v in self._default_config().items():
             tracing_config.setdefault(k, v)
 
-        tracing_type = tracing_config.get('TYPE')
-
-        if tracing_type == 'jaeger':
-            self.init_jaeger_tracing(app=app, tracing_config=tracing_config)
-        else:
-            raise RuntimeError(f'不支持的链路跟踪类型:{tracing_type}')
+        if tracing_config.get('ENABLED', False):
+            tracing_type = tracing_config.get('TYPE')
+            if tracing_type == 'jaeger':
+                self.init_jaeger_tracing(app=app, tracing_config=tracing_config)
+            else:
+                raise RuntimeError(f'不支持的链路跟踪类型:{tracing_type}')
 
     def init_jaeger_tracing(self, app: Flask, tracing_config: dict):
         config: dict = tracing_config.get('JAEGER')  # type:ignore

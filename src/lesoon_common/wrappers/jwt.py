@@ -36,7 +36,7 @@ class LesoonJwt(JWTManager):
         app.config.setdefault('JWT_ENABLE', False)
         app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES',
                               datetime.timedelta(days=30))
-        app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+        app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'token')
         app.config.setdefault('JWT_ACCESS_COOKIE_PATH', '/')
         app.config.setdefault('JWT_ACCESS_CSRF_COOKIE_NAME',
                               'csrf_access_token')
@@ -79,7 +79,8 @@ class LesoonJwt(JWTManager):
                               datetime.timedelta(days=30))
         app.config.setdefault('JWT_SECRET_KEY', None)
         app.config.setdefault('JWT_SESSION_COOKIE', True)
-        app.config.setdefault('JWT_TOKEN_LOCATION', ('headers', 'query_string'))
+        app.config.setdefault('JWT_TOKEN_LOCATION',
+                              ('headers', 'query_string', 'cookies'))
         app.config.setdefault('JWT_ENCODE_NBF', False)
 
     def _encode_jwt_from_config(

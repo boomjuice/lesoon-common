@@ -21,7 +21,6 @@ from lesoon_common.extensions import jwt
 from lesoon_common.extensions import ma
 from lesoon_common.extensions import mg
 from lesoon_common.extensions import toolbar
-from lesoon_common.plugins import Bootstrap
 from lesoon_common.resource import LesoonResource
 from lesoon_common.resource import LesoonResourceItem
 from lesoon_common.response import error_response
@@ -29,6 +28,7 @@ from lesoon_common.utils.str import camelcase
 from lesoon_common.view import LesoonView
 from lesoon_common.wrappers import LesoonRequest
 from lesoon_common.wrappers import LesoonTestClient
+from lesoon_common.wrappers.plugins import Bootstrap
 
 sqlalchemy_codes = {'pymysql': MysqlCode, 'MySQLdb': MysqlCode}
 
@@ -112,7 +112,6 @@ class LesoonFlask(Flask):
         **kwargs,
     ):
         super().__init__(import_name, **kwargs)
-        self.init_config(config=config)
         self.registered_extensions = self.default_extensions
         if extra_extensions:
             self.registered_extensions.update(**extra_extensions)
@@ -120,6 +119,7 @@ class LesoonFlask(Flask):
         if bootstrap:
             # 启动引导
             Bootstrap(app=self)
+        self.init_config(config=config)
         self._init_flask()
         self.url_map.strict_slashes = False
 
