@@ -6,18 +6,21 @@ import time
 import typing as t
 import warnings
 
+import filelock  # type:ignore
 import jaeger_client
-from flask import current_app
-from flask import Flask
 from flask_opentracing import FlaskTracing
 from jaeger_client import config as jaeger_config
 from opentracing.ext import tags
 from opentracing_instrumentation.client_hooks import install_all_patches
 from werkzeug.utils import import_string
 
+from lesoon_common.globals import current_app
 from lesoon_common.response import error_response
 from lesoon_common.response import success_response
 from lesoon_common.utils.health_check import timeout
+
+if t.TYPE_CHECKING:
+    from lesoon_common.base import LesoonFlask
 
 
 class HealthCheck:
@@ -34,7 +37,7 @@ class HealthCheck:
 
     """
 
-    def __init__(self, app: t.Optional[Flask] = None):
+    def __init__(self, app: t.Optional['LesoonFlask'] = None):
         self.cache: t.Dict[t.Callable, dict] = dict()
         self.headers = {'Content-Type': 'application/json'}
         self.err_timeout = 0
@@ -45,7 +48,7 @@ class HealthCheck:
         if app is not None:
             self.init_app(app)
 
-    def init_app(self, app: Flask):
+    def init_app(self, app: 'LesoonFlask'):
         healthcheck_config = app.config.get('HEALTH_CHECK', {})
         for k, v in self._default_config().items():
             healthcheck_config.setdefault(k, v)
@@ -184,14 +187,14 @@ class Bootstrap:
 
     def __init__(self,
                  bootstrap_filename: t.Optional[str] = None,
-                 app: t.Optional[Flask] = None):
+                 app: t.Optional['LesoonFlask'] = None):
         self.bootstrap_filename = (bootstrap_filename or
                                    self.__class__.bootstrap_filename)
         self.config_filename = None
         if app:
             self.init_app(app)
 
-    def init_app(self, app: Flask):
+    def init_app(self, app: 'LesoonFlask'):
         parser = configparser.ConfigParser(interpolation=EnvInterpolation())
 
         # 读取bootstrap配置
@@ -201,14 +204,15 @@ class Bootstrap:
         if not all([parser.has_section(sec) for sec in self.fixed_sections]):
             raise RuntimeError(f'必须配置以下sections:{self.fixed_sections}')
 
-        self.config_filename = app.config_path.split('.', 1)[0]  # type:ignore
+        path_splitted = app.config_path.replace(':', '.').split('.', 1)
+        self.config_filename, self.config_class = path_splitted  #type:ignore
 
         if parser.getboolean('config', 'kubernetes_enabled'):
             # 通过k8s读取配置
             self.reload_config_from_configmap(parser=parser, app=app)
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,
-                                     app: Flask):
+                                     app: 'LesoonFlask'):
         """
         从k8s.configmap获取配置文件,写入本地的配置文件中.
         Args:
@@ -225,20 +229,36 @@ class Bootstrap:
         namespace = parser.get('kubernetes.config',
                                'namespace',
                                fallback='default')
+        env_flag = parser.get('kubernetes.config', 'env')
+        app.logger.info(f'正在获取k8s configmap, name:{name} namespace:{namespace}')
+
         # 获取configmap
         config.load_incluster_config()
         k8s_api = client.CoreV1Api()
 
+        config_filename = f'{env_flag}-{self.config_filename}'
         # cm = {"xx.py":"python code"}
         cm = k8s_api.read_namespaced_config_map(name=name, namespace=namespace)
 
         # configmap中存储的为python文件的字符串格式
         config_code = cm.data.get(f'{name}.py')
-        with open(f'{self.config_filename}.py', mode='w',
-                  encoding='utf-8') as fp:
-            app.logger.info(f'正在将configmap中配置写入{self.config_filename}.py')
-            fp.write(config_code)
-        app.init_config()  # type:ignore
+        success_fname = 'load_configmap.success'
+        if not os.path.exists(f'{config_filename}.py'):
+            try:
+                with filelock.FileLock('load_confimap.lock', timeout=0):
+                    app.logger.info('已获取文件锁,正在从configmap中重载配置文件...')
+                    with open(f'{config_filename}.py',
+                              mode='w',
+                              encoding='utf-8') as fp:
+                        app.logger.info(
+                            f'正在将configmap中配置写入{config_filename}.py')
+                        fp.write(config_code)
+                    open(success_fname, 'w').close()
+            except filelock.Timeout:
+                app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
+        while not os.path.lexists(success_fname):
+            continue
+        app.__class__.config_path = f'{config_filename}.{self.config_class}'  # type:ignore
 
 
 class LinkTracer:
@@ -268,7 +288,7 @@ class LinkTracer:
             }
         }
 
-    def init_app(self, app: Flask):
+    def init_app(self, app: 'LesoonFlask'):
         """
         初始化链路跟踪器jaeger.
         Args:
@@ -286,7 +306,7 @@ class LinkTracer:
             else:
                 raise RuntimeError(f'不支持的链路跟踪类型:{tracing_type}')
 
-    def init_jaeger_tracing(self, app: Flask, tracing_config: dict):
+    def init_jaeger_tracing(self, app: 'LesoonFlask', tracing_config: dict):
         config: dict = tracing_config.get('JAEGER')  # type:ignore
         for k, v in self._default_config().get('JAEGER', {}).items():
             config.setdefault(k, v)

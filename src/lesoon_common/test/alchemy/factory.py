@@ -1,13 +1,6 @@
-from datetime import datetime
-from functools import partial
-
 import factory
 
 from lesoon_common.extensions import db
-
-current_datetime = partial(datetime.strptime,
-                           date_string=datetime.now(),
-                           format='%Y-%m-%d %H:%M:%S')
 
 
 class SqlaFatory(factory.alchemy.SQLAlchemyModelFactory):

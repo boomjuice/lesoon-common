@@ -1,4 +1,5 @@
 import typing as t
+from datetime import datetime
 
 from flask import Flask
 from flask.ctx import has_request_context
@@ -12,6 +13,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from werkzeug.utils import cached_property
 
 from lesoon_common.code.response import ResponseCode
+from lesoon_common.exceptions import ServiceError
 from lesoon_common.globals import current_user
 from lesoon_common.parse.req import extract_sort_arg
 from lesoon_common.parse.req import extract_where_arg
@@ -84,23 +86,39 @@ class LesoonTestClient(FlaskClient):
     def __init__(self,
                  *args: t.Any,
                  camel: bool = False,
+                 convert_object: bool = True,
                  load_response: bool = True,
+                 datetime_format: str = '%Y-%m-%d %H:%M:%S',
                  **kwargs: t.Any) -> None:
         super().__init__(*args, **kwargs)
         self.camel = camel
+        self.convert_object = convert_object
+        self.datetime_format = datetime_format
         self.load_response = load_response
 
     def _camelcase_key(self, data: t.Mapping):
         return {camelcase(k): v for k, v in data.items()}
 
-    def _convert_request_kwargs(self, kw: dict):
-        if self.camel:
-            if 'query_string' in kw and isinstance(kw['query_string'],
-                                                   t.Mapping):
-                kw['query_string'] = self._camelcase_key(kw['query_string'])
+    def _convert_datetime(self, data: t.Mapping):
+        new_data = {}
+        for k, v in data.items():
+            if isinstance(v, datetime):
+                v = v.strftime(self.datetime_format)
+            new_data[k] = v
+        return new_data
 
-            if 'json' in kw and isinstance(kw['json'], t.Mapping):
-                kw['json'] = self._camelcase_key(kw['json'])
+    def _formatting(self, data: t.Mapping):
+        if self.convert_object:
+            data = self._convert_datetime(data)
+        if self.camel:
+            data = self._camelcase_key(data)
+        return data
+
+    def _convert_request_kwargs(self, kw: dict):
+        if 'query_string' in kw and isinstance(kw['query_string'], t.Mapping):
+            kw['query_string'] = self._formatting(kw['query_string'])
+        if 'json' in kw and isinstance(kw['json'], t.Mapping):
+            kw['json'] = self._formatting(kw['json'])
 
     def open(self, *args, **kwargs):
         response = super().open(*args, **kwargs)
@@ -110,7 +128,6 @@ class LesoonTestClient(FlaskClient):
             response = Response.load(response.json)
             if response.code != ResponseCode.Success.code:
                 print(f'接口调用异常，返回结果:{response.to_dict()}')
-                raise RuntimeError
             return response
         else:
             return response

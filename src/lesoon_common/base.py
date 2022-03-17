@@ -120,12 +120,15 @@ class LesoonFlask(Flask):
             # 启动引导
             Bootstrap(app=self)
         self.init_config(config=config)
+        self.logger.info(repr(self.config))
         self._init_flask()
         self.url_map.strict_slashes = False
 
     def init_config(self, config: t.Optional[object] = None):
         try:
-            self.config.from_object(config or self.config_path)
+            config = config or self.config_path
+            self.logger.info(f'开始加载应用配置, 配置对象:{config}')
+            self.config.from_object(config)
         except Exception as e:
             raise ConfigError(f'加载配置异常:{e}')
 
