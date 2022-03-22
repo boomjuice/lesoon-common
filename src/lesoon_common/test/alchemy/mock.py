@@ -4,6 +4,7 @@ from marshmallow_sqlalchemy.schema import SQLAlchemySchemaMeta
 
 from lesoon_common.code import ResponseCode
 from lesoon_common.model.alchemy.schema import SqlaSchema
+from lesoon_common.utils.base import generate_id
 
 
 class UnittestSQLAlchemySchemaMeta(SQLAlchemySchemaMeta):
@@ -31,12 +32,10 @@ def mock_alchemy_schema():
 
 def mock_get_distribute_id():
     from lesoon_client import IdCenterClient
-    IdCenterClient.id_seq = 1
 
     def mock_id(self):
         response = mock.Mock(code=ResponseCode.Success.code,
-                             result=IdCenterClient.id_seq)
-        IdCenterClient.id_seq += 1
+                             result=generate_id())
         return response
 
     return mock.patch.object(IdCenterClient, 'get_uid', mock_id)

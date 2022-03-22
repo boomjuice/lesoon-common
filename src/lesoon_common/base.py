@@ -26,6 +26,7 @@ from lesoon_common.resource import LesoonResourceItem
 from lesoon_common.response import error_response
 from lesoon_common.utils.str import camelcase
 from lesoon_common.view import LesoonView
+from lesoon_common.wrappers import LesoonJsonEncoder
 from lesoon_common.wrappers import LesoonRequest
 from lesoon_common.wrappers import LesoonTestClient
 from lesoon_common.wrappers.plugins import Bootstrap
@@ -102,6 +103,9 @@ class LesoonFlask(Flask):
 
     # 配置文件路径
     config_path = os.environ.get('CONFIG_PATH', 'config.Config')
+
+    # json encoder
+    json_encoder = LesoonJsonEncoder
 
     def __init__(
         self,

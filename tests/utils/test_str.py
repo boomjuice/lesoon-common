@@ -12,8 +12,11 @@ class TestStrUtil:
     def test_camelcase_udl(self):
         assert camelcase('test_example') == 'testExample'
 
-    def test_upper_camelcase_udl(self):
+    def test_camelcase_upper_udl(self):
         assert camelcase('test_example'.title()) == 'TestExample'
+
+    def test_upper_camelcase_udl(self):
+        assert camelcase('test_example', upper=True) == 'TestExample'
 
     def test_camelcase_invalid(self):
         with pytest.raises(TypeError):

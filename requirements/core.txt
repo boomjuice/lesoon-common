@@ -1,4 +1,5 @@
 cryptography==35.0.0
+factory_boy==3.2.1
 filelock==3.6.0
 Flask_Caching==1.10.1
 Flask_DebugToolbar==0.11.0
@@ -12,12 +13,12 @@ jaeger_client==4.8.0
 kubernetes==18.20.0
 marshmallow==3.14.0
 marshmallow_dataclass==8.5.3
+marshmallow_enum==1.5.1
 marshmallow_mongoengine==0.30.2
 marshmallow_sqlalchemy==0.26.1
 opentracing==2.4.0
 opentracing_instrumentation==3.3.1
 pymongo==3.12.1
-pytest==6.2.4
 python_jose==3.3.0
 sentry_sdk==1.1.0
 SQLAlchemy==1.4.27

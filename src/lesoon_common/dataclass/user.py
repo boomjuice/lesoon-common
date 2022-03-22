@@ -36,6 +36,12 @@ class TokenUser(BaseDataClass):
     user_name: str
     # 用户编号
     user_id: int
+    # 组织ID
+    org_id: int = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': None
+    })
     # 邮箱地址
     email: str = field(metadata={
         'allow_none': True,

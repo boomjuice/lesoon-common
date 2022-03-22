@@ -1,10 +1,12 @@
 import typing as t
 from datetime import datetime
+from decimal import Decimal
 
 from flask import Flask
 from flask.ctx import has_request_context
 from flask.globals import request
 from flask.helpers import make_response
+from flask.json import JSONEncoder
 from flask.templating import render_template_string
 from flask.testing import FlaskClient
 from flask.wrappers import Request
@@ -187,3 +189,11 @@ class LesoonDebugTool(DebugToolbarExtension):
 
         app.after_request(json_to_html)
         super().init_app(app)
+
+
+class LesoonJsonEncoder(JSONEncoder):
+
+    def default(self, o: t.Any) -> t.Any:
+        if isinstance(o, Decimal):
+            return str(o)
+        return super().default(o)
