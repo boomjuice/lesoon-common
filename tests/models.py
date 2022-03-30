@@ -6,7 +6,7 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 
 from lesoon_common.model import fields
-from lesoon_common.model import SqlaCamelAutoSchema
+from lesoon_common.model import SqlaAutoSchema
 from lesoon_common.model.alchemy.base import Model
 from lesoon_common.wrappers import LesoonQuery
 
@@ -30,20 +30,17 @@ class UserExt(Model):
     create_time = Column(DateTime, default=func.now())
 
 
-class UserSchema(SqlaCamelAutoSchema):
+class UserSchema(SqlaAutoSchema):
     id = fields.IntStr()
 
-    def on_bind_field(self, field_name, field_obj) -> None:
-        pass
-
-    class Meta(SqlaCamelAutoSchema.Meta):
+    class Meta(SqlaAutoSchema.Meta):
         model = User
         ordered = False
         exclude = ['create_time', 'status']
 
 
-class UserExtSchema(SqlaCamelAutoSchema):
+class UserExtSchema(SqlaAutoSchema):
 
-    class Meta(SqlaCamelAutoSchema.Meta):
+    class Meta(SqlaAutoSchema.Meta):
         model = UserExt
         exclude = ['create_time']

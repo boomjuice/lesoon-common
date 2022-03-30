@@ -1,8 +1,5 @@
 import pytest
 from sqlalchemy.exc import DatabaseError
-from tests.api import api
-from tests.api import bp
-from tests.api import UserResource
 from tests.conftest import Config
 from werkzeug.exceptions import MethodNotAllowed
 
@@ -88,17 +85,3 @@ class TestLesoonFlask:
         assert app.registered_extensions['test'] is mock
         assert mock.init is True
         assert getattr(app, 'test') is mock  # noqa:B009
-
-
-class TestLesoonApi:
-
-    @pytest.fixture(autouse=True)
-    def setup_method(self, app):
-        api.register_resource(UserResource, '/User', endpoint='user')
-        app.register_blueprint(bp)
-
-    def test_register_resource(self, app):
-        url_rule = app.url_map._rules
-        rules = [_.rule for _ in url_rule]
-        assert '/User' in rules
-        assert '/User/<int:id>' in rules

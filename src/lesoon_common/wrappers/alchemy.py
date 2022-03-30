@@ -5,8 +5,6 @@ from flask_sqlalchemy import BaseQuery
 from flask_sqlalchemy import Pagination
 
 from lesoon_common.globals import request
-from lesoon_common.parse.sqla import parse_multi_condition
-from lesoon_common.parse.sqla import parse_related_models
 
 
 class LesoonQuery(BaseQuery):
@@ -40,23 +38,3 @@ class LesoonQuery(BaseQuery):
         total = count_query.order_by(None).count()
 
         return Pagination(self, page, per_page, total, items)
-
-    def with_request_condition(self,
-                               add_where: bool = True,
-                               add_sort: bool = True):
-        """注入请求查询过滤条件.
-        : 将请求参数转化成sqlalchemy语法,注入Query对象
-        : 注意 此方法只能在Flask请求上下文中调用
-        """
-        if any([add_where, add_sort]):
-            related_models = parse_related_models(self.statement)
-            where_list, sort_list = parse_multi_condition(
-                request.where.copy(),  # type:ignore
-                request.sort.copy(),  # type:ignore
-                related_models,
-            )
-            if add_where:
-                self = self.filter(*where_list)  # noqa
-            if add_sort:
-                self = self.order_by(*sort_list)  # noqa
-        return self

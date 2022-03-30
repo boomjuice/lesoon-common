@@ -17,13 +17,12 @@ from werkzeug.utils import cached_property
 from lesoon_common.code.response import ResponseCode
 from lesoon_common.exceptions import ServiceError
 from lesoon_common.globals import current_user
-from lesoon_common.parse.req import extract_sort_arg
-from lesoon_common.parse.req import extract_where_arg
 from lesoon_common.response import Response
+from lesoon_common.response import ResponseBase
 from lesoon_common.utils.jwt import get_token
 from lesoon_common.utils.str import camelcase
 
-ResponseType = t.Union[Response, FlaskResponse]
+ResponseType = t.Union[ResponseBase, FlaskResponse]
 
 
 class LesoonRequest(Request):
@@ -31,13 +30,13 @@ class LesoonRequest(Request):
     PAGE_SIZE_LIMIT = 100000
 
     @cached_property
-    def where(self) -> t.Dict[str, t.Any]:
-        where = extract_where_arg(self.args.get('where'))
+    def where(self) -> t.Optional[str]:
+        where = self.args.get('where')
         return where
 
     @cached_property
-    def sort(self) -> t.List[t.Tuple[str, str]]:
-        sort = extract_sort_arg(self.args.get('sort'))
+    def sort(self) -> t.Optional[str]:
+        sort = self.args.get('sort')
         return sort
 
     @cached_property
@@ -91,12 +90,14 @@ class LesoonTestClient(FlaskClient):
                  convert_object: bool = True,
                  load_response: bool = True,
                  datetime_format: str = '%Y-%m-%d %H:%M:%S',
+                 response_cls: t.Type[ResponseBase] = Response,
                  **kwargs: t.Any) -> None:
         super().__init__(*args, **kwargs)
         self.camel = camel
         self.convert_object = convert_object
         self.datetime_format = datetime_format
         self.load_response = load_response
+        self.response_cls = response_cls
 
     def _camelcase_key(self, data: t.Mapping):
         return {camelcase(k): v for k, v in data.items()}
@@ -127,7 +128,7 @@ class LesoonTestClient(FlaskClient):
         if self.load_response:
             if response.status_code != 200:
                 raise RuntimeError
-            response = Response.load(response.json)
+            response = self.response_cls.load(response.json)
             if response.code != ResponseCode.Success.code:
                 print(f'接口调用异常，返回结果:{response.to_dict()}')
             return response

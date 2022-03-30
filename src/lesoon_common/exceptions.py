@@ -4,18 +4,6 @@ import typing as t
 from lesoon_common.response import ResponseCode
 
 
-class ParseError(Exception):
-    """请求参数解析异常"""
-
-    pass
-
-
-class ResourceDefindError(Exception):
-    """资源类定义异常"""
-
-    pass
-
-
 class ConfigError(Exception):
     """配置异常"""
 

@@ -1,7 +1,36 @@
-from lesoon_common.response import error_response
+from collections import OrderedDict
+
+from lesoon_common.response import ClientResponse
 from lesoon_common.response import Response
+from lesoon_common.response import ResponseBase
 from lesoon_common.response import ResponseCode
-from lesoon_common.response import success_response
+
+
+class TestResponseABC:
+
+    def test_load(self):
+        resp_dict = {
+            'flag': {
+                'retCode': '1234',
+                'retMsg': 'test'
+            },
+            'total': 1,
+        }
+        resp = ResponseBase.load(resp_dict)
+        assert resp.code == '1234'
+        assert resp.total == 1
+
+    def test_none(self):
+        expected_resp = Response(code=ResponseCode.Success)
+        assert expected_resp.to_dict() == Response.success()
+
+    def test_fixed_attr(self):
+        r = Response.success(total=123)
+        assert r['total'] == 123
+
+    def test_custom_attr(self):
+        r = Response.success(test=123)
+        assert r['test'] == 123
 
 
 class TestResponse:
@@ -19,36 +48,71 @@ class TestResponse:
         }
         resp = Response.load(resp_dict)
         assert resp.code == '1234'
-        assert resp.data == {'a': 1}
+        assert resp.result == {'a': 1}
         assert resp.total == 1
 
+        resp_dict = {
+            'flag': {
+                'retCode': '1234',
+                'retMsg': 'test'
+            },
+            'rows': [{
+                'a': 1
+            }],
+            'total': 1,
+        }
+        resp = Response.load(resp_dict)
+        assert resp.code == '1234'
+        assert resp.result == [{'a': 1}]
+        assert resp.total == 1
 
-class TestResponseUtils:
-
-    def test_success_response_null(self):
-        expected_resp = Response(code=ResponseCode.Success)
-        r = success_response()
-        assert expected_resp.to_dict() == r
-
-    def test_success_response_dict(self):
+    def test_mapping_result(self):
         result = {'a': 1}
-        r = success_response(result=result)
+        r = Response.success(result=result)
         assert r['data'] == result
 
-    def test_success_response_list(self):
+        result = OrderedDict({'a': 1})
+        r = Response.success(result=result)
+        assert r['data'] == result
+
+    def test_sequence_result(self):
         results = [{'a': 1}, {'b': 2}]
-        r = success_response(result=results)
+        r = Response.success(result=results)
         assert r['rows'] == results
 
-    def test_success_response_extra_type(self):
+        results = ({'a': 1}, {'b': 2})
+        r = Response.success(result=results)
+        assert r['rows'] == list(results)
+
+        results = {'a', 'b', 'c'}
+        r = Response.success(result=results)
+        assert r['rows'] == list(results)
+
+    def test_unknown_type(self):
         result = 'test'
-        r = success_response(result=result)
+        r = Response.success(result=result)
         assert r['data'] == result
 
-    def test_success_response_custom_key(self):
-        r = success_response(total=123)
-        assert r['total'] == 123
 
-    def test_error_response_null(self):
-        r = Response.load(error_response())
-        assert r.code == str(ResponseCode.Error.code)
+class TestClientResponse:
+
+    def test_load(self):
+        resp_dict = {
+            'flag': {
+                'retCode': '1234',
+                'retMsg': 'test'
+            },
+            'body': {
+                'a': 1
+            },
+            'total': 1,
+        }
+        resp = ClientResponse.load(resp_dict)
+        assert resp.code == '1234'
+        assert resp.result == {'a': 1}
+        assert resp.total == 1
+
+    def test_result(self):
+        result = {'a': 1}
+        r = ClientResponse.success(result=result)
+        assert r['body'] == result

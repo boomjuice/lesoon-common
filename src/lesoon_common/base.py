@@ -21,11 +21,8 @@ from lesoon_common.extensions import jwt
 from lesoon_common.extensions import ma
 from lesoon_common.extensions import mg
 from lesoon_common.extensions import toolbar
-from lesoon_common.resource import LesoonResource
-from lesoon_common.resource import LesoonResourceItem
 from lesoon_common.response import error_response
 from lesoon_common.utils.str import camelcase
-from lesoon_common.view import LesoonView
 from lesoon_common.wrappers import LesoonJsonEncoder
 from lesoon_common.wrappers import LesoonRequest
 from lesoon_common.wrappers import LesoonTestClient
@@ -168,62 +165,3 @@ class LesoonFlask(Flask):
                 register(CommandLogger())
             except Exception as e:
                 self.logger.exception(f'Mongo日志器初始化异常：{e}')
-
-
-class LesoonApi(Api):
-    supported_register_classes = {LesoonResource, LesoonView}
-
-    def handle_error(self, error: Exception):
-        """
-        因为flask-restful并未提供自定义的异常捕获,
-        这里直接将异常抛出给flask做全局异常处理.
-        Args:
-            error: 异常实例
-        """
-        raise error
-
-    def add_resource_item(self, resource: t.Type[LesoonResource], *urls,
-                          **kwargs):
-        """注册资源项目."""
-        # 生成resourceItem类
-        cls_attrs = {
-            '__model__': resource.__model__,
-            '__schema__': resource.__schema__
-        }
-        resource_item_cls: t.Type[LesoonResourceItem] = type(
-            f'{resource}Item', (LesoonResourceItem,), cls_attrs)
-        ri_cls = resource.item_cls = resource_item_cls
-
-        # 生成resourceItem 路由参数
-        item_endpoint = kwargs.get('endpoint') or camelcase(resource.__name__)
-        kwargs['endpoint'] = item_endpoint + '_item'
-        kwargs['methods'] = ri_cls.item_lookup_methods
-        url_suffix = f'/<{ri_cls.item_lookup_type}:{ri_cls.item_lookup_field}>'
-        item_urls = [url + url_suffix for url in urls]
-        self.add_resource(resource.item_cls, *item_urls, **kwargs)
-
-    def register_resource(self, resource: t.Type[LesoonResource], *urls,
-                          **kwargs):
-        """注册资源.
-        如果资源设置item_lookup,默认为True,则会追加注册item资源
-        """
-        if issubclass(resource, LesoonResource):
-            if getattr(resource, 'if_item_lookup', True):
-                self.add_resource_item(resource, *urls, **kwargs)
-        self.add_resource(resource, *urls, **kwargs)
-
-    def register_view(self, view_class: t.Type[LesoonView], url, **kwargs):
-        if not issubclass(view_class, LesoonView):
-            raise TypeError('view_class必须为LesoonView的子类')
-        view_class.register(self.app, url, **kwargs)
-
-    def register(self, rule_provider: t.Union[t.Type[LesoonResource],
-                                              t.Type[LesoonView]], *args,
-                 **kwargs):
-        if issubclass(rule_provider, LesoonResource):
-            self.register_resource(rule_provider, *args, **kwargs)
-        elif issubclass(rule_provider, LesoonView):
-            self.register_view(rule_provider, *args, **kwargs)
-        else:
-            raise TypeError(
-                f'rule_provider只支持为{self.supported_register_classes}的子类')
