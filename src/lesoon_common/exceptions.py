@@ -6,7 +6,11 @@ from lesoon_common.response import ResponseCode
 
 class ConfigError(Exception):
     """配置异常"""
+    pass
 
+
+class ParseError(Exception):
+    """解析异常"""
     pass
 
 

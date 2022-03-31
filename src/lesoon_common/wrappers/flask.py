@@ -20,6 +20,7 @@ from lesoon_common.globals import current_user
 from lesoon_common.response import Response
 from lesoon_common.response import ResponseBase
 from lesoon_common.utils.jwt import get_token
+from lesoon_common.utils.req import convert_dict
 from lesoon_common.utils.str import camelcase
 
 ResponseType = t.Union[ResponseBase, FlaskResponse]
@@ -30,13 +31,13 @@ class LesoonRequest(Request):
     PAGE_SIZE_LIMIT = 100000
 
     @cached_property
-    def where(self) -> t.Optional[str]:
-        where = self.args.get('where')
-        return where
+    def where(self) -> t.Dict[str, t.Any]:
+        where = convert_dict(param=self.args.get('where'))
+        return where  # type:ignore
 
     @cached_property
-    def sort(self) -> t.Optional[str]:
-        sort = self.args.get('sort')
+    def sort(self) -> t.Union[str, t.Dict[str, t.Any]]:
+        sort = convert_dict(param=self.args.get('sort'), silent=True)
         return sort
 
     @cached_property
