@@ -67,4 +67,4 @@ class BaseDocument(Document, FixedOperatorMixin):  # type:ignore
 
 
 class BaseCompanyDocument(BaseDocument, CompanyMixin):
-    pass
+    meta = {'abstract': True}
