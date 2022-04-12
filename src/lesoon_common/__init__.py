@@ -19,4 +19,4 @@ from .utils.jwt import jwt_required
 from .wrappers import LesoonQuery
 from .wrappers import LesoonRequest
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'

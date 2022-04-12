@@ -30,6 +30,12 @@ class TokenUser(BaseDataClass):
         'allow_none': True,
         'load_default': None
     })
+    # 系统id
+    system_id: int = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': None
+    })
     # 登录名
     login_name: str
     # 用户名称
@@ -121,6 +127,7 @@ class TokenUser(BaseDataClass):
             'loginName': '-',
             'userName': '系统自动生成',
             'userId': -1,
+            'systemId': 1,
             'ifAdmin': True
         }
         return cls.load(system_user)

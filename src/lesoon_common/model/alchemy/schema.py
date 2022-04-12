@@ -26,6 +26,7 @@ class SqlaModelConverter(ModelConverter):
         mysql.INTEGER: fields.Integer,
         mysql.DATETIME: fields.DateTime,
         mysql.BIGINT: fields.IntStr,
+        sqltypes.DateTime: fields.DateTime,
         sqltypes.BigInteger: fields.IntStr,
         sqltypes.NullType: fields.Str
     }
