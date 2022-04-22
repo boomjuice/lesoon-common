@@ -1,3 +1,5 @@
+import typing as t
+
 import marshmallow as ma
 
 from lesoon_common.utils.str import camelcase
@@ -25,27 +27,9 @@ class CamelSchema(BaseSchema):
                       field_obj: ma.fields.Field) -> None:
         field_obj.data_key = camelcase(field_obj.data_key or field_name)
 
-
-class ListOrNotSchema(ma.Schema):
-
-    def load(
-        self,
-        data,
-        *,
-        many=None,
-        partial=None,
-        unknown=None,
-    ):
-        try:
-            return super().load(data,
-                                many=many,
-                                partial=partial,
-                                unknown=unknown)
-        except ma.exceptions.ValidationError as e:
-            if not many:
-                many = True
-                return super().load(data,
-                                    many=many,
-                                    partial=partial,
-                                    unknown=unknown)
-            raise e
+    @ma.pre_load
+    def camelcase_dict_keys(self, data: t.Any, **kwargs):
+        new_data = data
+        if isinstance(data, dict):
+            new_data = {camelcase(k): v for k, v in data.items()}
+        return new_data

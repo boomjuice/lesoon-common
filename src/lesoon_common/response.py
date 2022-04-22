@@ -36,7 +36,6 @@ class ResponseBase:
         self.flag: t.Dict[str, str] = dict()
         self.code = code.code
         self.msg = code.msg
-        self.total = 0
         for k, v in kwargs.items():
             if v:
                 setattr(self, k, v)

@@ -4,10 +4,18 @@ import typing as t
 from flask_sqlalchemy import BaseQuery
 from flask_sqlalchemy import Pagination
 
+from lesoon_common.code import ResponseCode
+from lesoon_common.exceptions import RequestError
 from lesoon_common.globals import request
 
 
 class LesoonQuery(BaseQuery):
+
+    def first_or_404(self, description: t.Optional[str] = None):
+        rv = self.first()
+        if not rv:
+            raise RequestError(msg=description or '查询条件没有对应的查询结果')
+        return rv
 
     def paginate(
         self,
