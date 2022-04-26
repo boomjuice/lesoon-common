@@ -2,6 +2,7 @@ from .alchemy import BaseCompanyModel
 from .alchemy import BaseModel
 from .alchemy import CommonMixin
 from .alchemy import fields
+from .alchemy import IdModel
 from .alchemy import RemarkMixin
 from .alchemy import SqlaAutoSchema
 from .alchemy import SqlaCamelAutoSchema
