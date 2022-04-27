@@ -11,7 +11,11 @@ from lesoon_common.utils.str import camelcase
 class TokenUser(BaseDataClass):
     """token中存放的用户信息,通过current_user()获取."""
     # 用户id
-    id: int
+    id: int = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': -1
+    })
     # 公司id
     company_id: int = field(metadata={
         'required': False,
@@ -41,7 +45,11 @@ class TokenUser(BaseDataClass):
     # 用户名称
     user_name: str
     # 用户编号
-    user_id: int
+    user_id: int = field(metadata={
+        'required': False,
+        'allow_none': True,
+        'load_default': -1
+    })
     # 组织ID
     org_id: int = field(metadata={
         'required': False,
@@ -98,13 +106,6 @@ class TokenUser(BaseDataClass):
         'load_default': '',
         'allow_none': True
     })
-
-    @ma.pre_load()
-    def pre_process(self, data, **kwargs):
-        # TODO: JAVA体系不存在user_id, 加载实例会报错
-        if 'userId' not in data:
-            data['userId'] = data.get('id', -1)
-        return data
 
     @ma.post_dump()
     def dump_process(self, data, **kwargs):
