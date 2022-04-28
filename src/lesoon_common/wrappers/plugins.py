@@ -183,7 +183,11 @@ class Bootstrap:
 
     fixed_sections = {'app', 'config'}
 
+    # K8S项名称
     kubernetes_section = 'kubernetes.config'
+
+    # Apollo项名称
+    apollo_section = 'apollo.config'
 
     def __init__(self,
                  bootstrap_filename: t.Optional[str] = None,
@@ -211,6 +215,10 @@ class Bootstrap:
             # 通过k8s读取配置
             self.reload_config_from_configmap(parser=parser, app=app)
 
+        if parser.getboolean('config', 'apollo_enabled'):
+            # 通过apollo读取配置
+            self.reload_config_from_apollo(parser=parser, app=app)
+
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,
                                      app: 'LesoonFlask'):
         """
@@ -225,40 +233,26 @@ class Bootstrap:
                                f'不存在名为{self.kubernetes_section}的section')
 
         from kubernetes import client, config
-        name = parser.get('kubernetes.config', 'name')
-        namespace = parser.get('kubernetes.config',
+        name = parser.get(self.kubernetes_section, 'name')
+        namespace = parser.get(self.kubernetes_section,
                                'namespace',
                                fallback='default')
-        env_flag = parser.get('kubernetes.config', 'env')
         app.logger.info(f'正在获取k8s configmap, name:{name} namespace:{namespace}')
 
         # 获取configmap
         config.load_incluster_config()
         k8s_api = client.CoreV1Api()
 
-        config_filename = f'{env_flag}-{self.config_filename}'
-        # cm = {"xx.py":"python code"}
+        # cm = {"xx.yml":"python code"}
         cm = k8s_api.read_namespaced_config_map(name=name, namespace=namespace)
 
         # configmap中存储的为python文件的字符串格式
-        config_code = cm.data.get(f'{name}.py')
-        success_fname = 'load_configmap.success'
-        if not os.path.exists(f'{config_filename}.py'):
-            try:
-                with filelock.FileLock('load_confimap.lock', timeout=0):
-                    app.logger.info('已获取文件锁,正在从configmap中重载配置文件...')
-                    with open(f'{config_filename}.py',
-                              mode='w',
-                              encoding='utf-8') as fp:
-                        app.logger.info(
-                            f'正在将configmap中配置写入{config_filename}.py')
-                        fp.write(config_code)
-                    open(success_fname, 'w').close()
-            except filelock.Timeout:
-                app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
-        while not os.path.lexists(success_fname):
-            continue
-        app.__class__.config_path = f'{config_filename}.{self.config_class}'  # type:ignore
+        config_code = cm.data.get(f'{name}.yml')
+        app.config.from_yaml(config_code)
+
+    def reload_config_from_apollo(self, parser: configparser.ConfigParser,
+                                  app: 'LesoonFlask'):
+        pass
 
 
 class LinkTracer:

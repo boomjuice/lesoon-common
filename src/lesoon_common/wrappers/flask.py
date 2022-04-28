@@ -2,7 +2,9 @@ import typing as t
 from datetime import datetime
 from decimal import Decimal
 
+import yaml
 from flask import Flask
+from flask.config import Config
 from flask.ctx import has_request_context
 from flask.globals import request
 from flask.helpers import make_response
@@ -199,3 +201,18 @@ class LesoonJsonEncoder(JSONEncoder):
         if isinstance(o, Decimal):
             return str(o)
         return super().default(o)
+
+
+class LesoonConfig(Config):
+
+    def from_object(self, obj: t.Union[object, str]) -> None:
+        if isinstance(obj, str) and obj.endswith('yml'):
+            with open(obj, encoding='utf-8') as f:
+                yaml_str = f.read()
+            return self.from_yaml(data=yaml_str)
+        else:
+            return super().from_object(obj)
+
+    def from_yaml(self, data: str):
+        config: dict = yaml.safe_load(data)
+        return self.from_mapping(config)

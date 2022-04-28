@@ -23,6 +23,7 @@ from lesoon_common.extensions import mg
 from lesoon_common.extensions import toolbar
 from lesoon_common.response import error_response
 from lesoon_common.utils.str import camelcase
+from lesoon_common.wrappers import LesoonConfig
 from lesoon_common.wrappers import LesoonJsonEncoder
 from lesoon_common.wrappers import LesoonRequest
 from lesoon_common.wrappers import LesoonTestClient
@@ -95,11 +96,14 @@ class LesoonFlask(Flask):
     # request处理类
     request_class = LesoonRequest
 
+    # config配置类
+    config_class = LesoonConfig
+
     # client处理类
     test_client_class = LesoonTestClient
 
     # 配置文件路径
-    config_path = os.environ.get('CONFIG_PATH', 'config.Config')
+    config_path = os.environ.get('CONFIG_PATH', 'config.yml')
 
     # json encoder
     json_encoder = LesoonJsonEncoder

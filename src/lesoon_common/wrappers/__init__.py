@@ -1,4 +1,5 @@
 from .alchemy import LesoonQuery
+from .flask import LesoonConfig
 from .flask import LesoonDebugTool
 from .flask import LesoonJsonEncoder
 from .flask import LesoonRequest
