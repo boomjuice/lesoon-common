@@ -1,4 +1,4 @@
-apollo_client==2.1.2
+apollo_client_python==0.0.1
 cryptography==35.0.0
 factory_boy==3.2.1
 filelock==3.6.0
@@ -25,4 +25,3 @@ pyyaml==5.4.1
 sentry_sdk==1.1.0
 SQLAlchemy==1.4.27
 Werkzeug==2.0.1
-yaml

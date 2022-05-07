@@ -6,8 +6,9 @@ import time
 import typing as t
 import warnings
 
-import filelock  # type:ignore
+import filelock
 import jaeger_client
+import yaml
 from flask_opentracing import FlaskTracing
 from jaeger_client import config as jaeger_config
 from opentracing.ext import tags
@@ -173,28 +174,27 @@ class EnvInterpolation(configparser.ExtendedInterpolation):
 class Bootstrap:
     """ 配置引导拓展.
     主要用于配置的自动读取以及热更新
-    目前只支持kubernetes.configmap方式.
+    目前支持kubernetes.configmap,apollo方式.
 
     Attributes:
         bootstrap_filename: 引导文件名, 默认为 bootstrap.cfg
-        config_filename: 配置文件名, 默认为config.py
+        config_filename: 配置文件名, 默认为app.config_path
     """
-    bootstrap_filename = 'bootstrap.cfg'
+    BOOTSTRAP_FILENAME = 'bootstrap.cfg'
 
-    fixed_sections = {'app', 'config'}
+    FIXED_SECTIONS = {'app', 'config'}
 
     # K8S项名称
-    kubernetes_section = 'kubernetes.config'
+    KUBERNETES_SECTION = 'kubernetes.config'
 
     # Apollo项名称
-    apollo_section = 'apollo.config'
+    APOLLO_SECTION = 'apollo.config'
 
     def __init__(self,
                  bootstrap_filename: t.Optional[str] = None,
                  app: t.Optional['LesoonFlask'] = None):
-        self.bootstrap_filename = (bootstrap_filename or
-                                   self.__class__.bootstrap_filename)
-        self.config_filename = None
+        self.BOOTSTRAP_FILENAME = bootstrap_filename or self.BOOTSTRAP_FILENAME
+        self.config_filename = app.config_path  # type:ignore
         if app:
             self.init_app(app)
 
@@ -202,14 +202,11 @@ class Bootstrap:
         parser = configparser.ConfigParser(interpolation=EnvInterpolation())
 
         # 读取bootstrap配置
-        if not parser.read(self.bootstrap_filename):
-            warnings.warn(f'启动配置:{self.bootstrap_filename}不存在', RuntimeWarning)
+        if not parser.read(self.BOOTSTRAP_FILENAME):
+            warnings.warn(f'启动配置:{self.BOOTSTRAP_FILENAME}不存在', RuntimeWarning)
             return
-        if not all([parser.has_section(sec) for sec in self.fixed_sections]):
-            raise RuntimeError(f'必须配置以下sections:{self.fixed_sections}')
-
-        path_splitted = app.config_path.replace(':', '.').split('.', 1)
-        self.config_filename, self.config_class = path_splitted  #type:ignore
+        if not all([parser.has_section(sec) for sec in self.FIXED_SECTIONS]):
+            raise RuntimeError(f'必须配置以下sections:{self.FIXED_SECTIONS}')
 
         if parser.getboolean('config', 'kubernetes_enabled'):
             # 通过k8s读取配置
@@ -218,6 +215,27 @@ class Bootstrap:
         if parser.getboolean('config', 'apollo_enabled'):
             # 通过apollo读取配置
             self.reload_config_from_apollo(parser=parser, app=app)
+
+    @staticmethod
+    def rewrite_config(app: 'LesoonFlask', rewrite_type: str,
+                       config_filename: str, content: str):
+        success_filename = 'config_rewrite.success'
+        if not os.path.exists(success_filename):
+            try:
+                with filelock.FileLock('config.lock', timeout=0):
+                    app.logger.info(f'已获取文件锁,正在从{rewrite_type}中重载配置文件...')
+                    with open(config_filename, mode='w',
+                              encoding='utf-8') as fp:
+                        app.logger.info(
+                            f'正在将{rewrite_type}中配置写入{config_filename}')
+                        fp.write(content)
+                    open(success_filename, 'w').close()
+            except filelock.Timeout:
+                app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
+        while not os.path.lexists(success_filename):
+            continue
+        os.remove(success_filename)
+        app.__class__.config_path = config_filename
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,
                                      app: 'LesoonFlask'):
@@ -228,31 +246,93 @@ class Bootstrap:
             app: `LesoonFlask`
 
         """
-        if not parser.has_section(self.kubernetes_section):
-            raise RuntimeError(f'{self.bootstrap_filename}配置异常:'
-                               f'不存在名为{self.kubernetes_section}的section')
-
+        if not parser.has_section(self.KUBERNETES_SECTION):
+            raise RuntimeError(f'{self.BOOTSTRAP_FILENAME}配置异常:'
+                               f'不存在名为{self.KUBERNETES_SECTION}的section')
         from kubernetes import client, config
-        name = parser.get(self.kubernetes_section, 'name')
-        namespace = parser.get(self.kubernetes_section,
+        name = parser.get(self.KUBERNETES_SECTION, 'name')
+        namespace = parser.get(self.KUBERNETES_SECTION,
                                'namespace',
                                fallback='default')
+        env_flag = parser.get(self.KUBERNETES_SECTION, 'env')
         app.logger.info(f'正在获取k8s configmap, name:{name} namespace:{namespace}')
 
         # 获取configmap
         config.load_incluster_config()
         k8s_api = client.CoreV1Api()
 
-        # cm = {"xx.yml":"python code"}
+        config_filename = f'{env_flag}-{self.config_filename}'
+        # cm = {"xx.py":"python code"}
         cm = k8s_api.read_namespaced_config_map(name=name, namespace=namespace)
 
         # configmap中存储的为python文件的字符串格式
-        config_code = cm.data.get(f'{name}.yml')
-        app.config.from_yaml(config_code)
+        content = cm.data.get(f'{name}.yml')
+        self.rewrite_config(app=app,
+                            rewrite_type='K8S',
+                            content=content,
+                            config_filename=config_filename)
+
+    @staticmethod
+    def _convert_properties_to_dict(config: dict) -> dict:
+        """
+        将properties格式的键转换为嵌套字典
+        Args:
+            config: 存在properties格式的键
+            e.q: {'a.b.c':1,'a.b.d':2} => {'a':{'b':{'c':1,'d':2}}}
+
+        Returns:
+
+        """
+        new_config: dict = {}
+        for k, v in config.items():
+            if '.' in k:
+                keys = k.split('.')
+                ck = new_config
+                for i in keys[:-1]:
+                    if i not in ck:
+                        ck[i] = {}
+                    ck = ck[i]
+                ck[keys[-1]] = v
+            else:
+                new_config[k] = v
+        return new_config
 
     def reload_config_from_apollo(self, parser: configparser.ConfigParser,
                                   app: 'LesoonFlask'):
-        pass
+        """
+        从apollo获取配置,写入本地的配置文件中.
+        Args:
+            parser: `configparser.ConfigParser`
+            app: `LesoonFlask`
+
+        """
+        if not parser.has_section(self.APOLLO_SECTION):
+            raise RuntimeError(f'{self.BOOTSTRAP_FILENAME}配置异常:'
+                               f'不存在名为{self.APOLLO_SECTION}的section')
+
+        name = parser.get(self.APOLLO_SECTION, 'name')
+        name = name if name.startswith('api') else f'{name}-api'
+        server_url = parser.get(self.APOLLO_SECTION, 'server_url')
+        env_flag = parser.get(self.APOLLO_SECTION, 'env')
+        namespaces = parser.get(self.APOLLO_SECTION, 'namespaces')
+        from apollo_client_python import ApolloClient
+
+        client = ApolloClient(app_id=name,
+                              config_url=server_url,
+                              namespaces=namespaces,
+                              start_hot_update=False)
+
+        app.logger.info(f'正在获取apollo配置, name:{name} namespaces:{namespaces}')
+
+        config_filename = f'{env_flag}-{self.config_filename}'
+
+        config = self._convert_properties_to_dict(client.get_config())
+        self.rewrite_config(
+            app=app,
+            rewrite_type='Apollo',
+            content=yaml.safe_dump(config).replace("'", ''),  #type: ignore
+            config_filename=config_filename,
+        )
 
 
 class LinkTracer:

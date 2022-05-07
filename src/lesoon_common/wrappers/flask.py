@@ -17,7 +17,6 @@ from flask_debugtoolbar import DebugToolbarExtension
 from werkzeug.utils import cached_property
 
 from lesoon_common.code.response import ResponseCode
-from lesoon_common.exceptions import ServiceError
 from lesoon_common.globals import current_user
 from lesoon_common.response import Response
 from lesoon_common.response import ResponseBase
@@ -205,11 +204,12 @@ class LesoonJsonEncoder(JSONEncoder):
 
 class LesoonConfig(Config):
 
-    def from_object(self, obj: t.Union[object, str]) -> None:
-        if isinstance(obj, str) and obj.endswith('yml'):
-            with open(obj, encoding='utf-8') as f:
-                yaml_str = f.read()
-            return self.from_yaml(data=yaml_str)
+    def from_object(self, obj: t.Union[object, str]):
+        if isinstance(obj, str):
+            if obj.endswith('yml') or obj.endswith('yaml'):
+                with open(obj, encoding='utf-8') as f:
+                    yaml_str = f.read()
+                return self.from_yaml(data=yaml_str)
         else:
             return super().from_object(obj)
 

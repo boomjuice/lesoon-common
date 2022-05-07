@@ -103,7 +103,7 @@ class LesoonFlask(Flask):
     test_client_class = LesoonTestClient
 
     # 配置文件路径
-    config_path = os.environ.get('CONFIG_PATH', 'config.yml')
+    config_path = os.environ.get('CONFIG_PATH', 'config.yaml')
 
     # json encoder
     json_encoder = LesoonJsonEncoder
