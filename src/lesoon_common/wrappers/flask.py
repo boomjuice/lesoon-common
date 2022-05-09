@@ -205,12 +205,14 @@ class LesoonJsonEncoder(JSONEncoder):
 class LesoonConfig(Config):
 
     def from_object(self, obj: t.Union[object, str]):
+        flag = False
         if isinstance(obj, str):
             if obj.endswith('yml') or obj.endswith('yaml'):
+                flag = True
                 with open(obj, encoding='utf-8') as f:
                     yaml_str = f.read()
                 return self.from_yaml(data=yaml_str)
-        else:
+        if not flag:
             return super().from_object(obj)
 
     def from_yaml(self, data: str):
