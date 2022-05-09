@@ -13,6 +13,7 @@ from flask import _app_ctx_stack
 from flask import _request_ctx_stack
 from flask import current_app
 from flask import request
+from flask.helpers import get_root_path
 from flask_jwt_extended.config import _Config
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.exceptions import UserLookupError
@@ -53,11 +54,13 @@ def create_token(user: t.Optional['TokenUser'] = None):
     """生成系统间调用token."""
     from lesoon_common.dataclass.user import TokenUser
     from lesoon_common.base import LesoonFlask
+    from lesoon_common.wrappers import LesoonConfig
 
-    config = import_string(LesoonFlask.config_path)
+    config = LesoonConfig(root_path='')
+    config.from_object(LesoonFlask.config_path)
 
-    secret_key = config.JWT_SECRET_KEY
-    expires_delta = config.JWT_ACCESS_TOKEN_EXPIRES
+    secret_key = config['JWT_SECRET_KEY']
+    expires_delta = config['JWT_ACCESS_TOKEN_EXPIRES']
 
     user: TokenUser = user or TokenUser.new()
 
