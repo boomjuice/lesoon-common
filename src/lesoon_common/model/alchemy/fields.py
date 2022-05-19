@@ -3,9 +3,6 @@ import typing
 import marshmallow as ma
 from marshmallow.fields import *  # noqa
 from marshmallow.utils import _iso8601_date_re as date_re  # noqa
-from marshmallow_sqlalchemy.fields import Nested
-from marshmallow_sqlalchemy.fields import Related
-from marshmallow_sqlalchemy.fields import RelatedList
 
 
 class IntStr(ma.fields.Int, ma.fields.Str):
@@ -21,7 +18,7 @@ class IntStr(ma.fields.Int, ma.fields.Str):
         return Integer._deserialize(self, value, attr, data, **kwargs)
 
 
-class DateTime(ma.fields.DateTime):
+class DateTime(ma.fields.DateTime):  # type: ignore
 
     def _deserialize(self, value: typing.Any, attr: typing.Optional[str],
                      data: typing.Optional[typing.Mapping[str, typing.Any]],
