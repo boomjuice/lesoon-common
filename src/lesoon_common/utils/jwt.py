@@ -54,10 +54,8 @@ def create_token(user: t.Optional['TokenUser'] = None):
     """生成系统间调用token."""
     from lesoon_common.dataclass.user import TokenUser
     from lesoon_common.base import LesoonFlask
-    from lesoon_common.wrappers import LesoonConfig
 
-    config = LesoonConfig(root_path='')
-    config.from_object(LesoonFlask.config_path)
+    config = LesoonFlask.cached_config
 
     secret_key = config['JWT_SECRET_KEY']
     expires_delta = config['JWT_ACCESS_TOKEN_EXPIRES']

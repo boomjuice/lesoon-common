@@ -21,10 +21,12 @@ class ServiceError(Exception):
 
     def __init__(self,
                  code: t.Optional[ResponseCode] = None,
-                 msg: t.Optional[str] = None):
+                 msg: t.Optional[str] = None,
+                 msg_detail: t.Optional[str] = None):
         super().__init__()
         self.code = code or self.__class__.CODE
         self.msg = msg or self.code.msg
+        self.msg_detail = msg_detail or self.code.msg
 
 
 class RequestError(ServiceError):

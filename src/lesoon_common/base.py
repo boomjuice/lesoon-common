@@ -12,6 +12,7 @@ from werkzeug.exceptions import HTTPException
 
 from lesoon_common.code import MysqlCode
 from lesoon_common.code import ResponseCode
+from lesoon_common.ctx import has_app_context
 from lesoon_common.exceptions import ConfigError
 from lesoon_common.exceptions import ServiceError
 from lesoon_common.extensions import ca
@@ -50,7 +51,9 @@ def handle_exception(error: Exception) -> t.Union[HTTPException, dict]:
         return error
     elif isinstance(error, ServiceError):
         # 服务异常
-        return error_response(code=error.code, msg=error.msg)
+        return error_response(code=error.code,
+                              msg=error.msg,
+                              msg_detail=error.msg_detail)
     elif hasattr(error, 'code') and hasattr(error, 'msg'):
         # 调用异常
         return error_response(code=error.code, msg=error.msg)  # type:ignore
@@ -105,6 +108,10 @@ class LesoonFlask(Flask):
     # 配置文件路径
     config_path = os.environ.get('CONFIG_PATH', 'config.yaml')
 
+    # 缓存配置
+    # 因为不在app上下文中无法获取app.config，所以此处需要做类属性的冗余
+    cached_config: LesoonConfig = {}
+
     # json encoder
     json_encoder = LesoonJsonEncoder
 
@@ -134,6 +141,7 @@ class LesoonFlask(Flask):
             config = config or self.config_path
             self.logger.info(f'开始加载应用配置, 配置对象:{config}')
             self.config.from_object(config)
+            self.__class__.cached_config = self.config
         except Exception as e:
             raise ConfigError(f'加载配置异常:{e}')
 
