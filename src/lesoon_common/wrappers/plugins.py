@@ -216,6 +216,9 @@ class Bootstrap:
             # 通过apollo读取配置
             self.reload_config_from_apollo(parser=parser, app=app)
 
+        if parser.getboolean('config', 'prometheus_enabled'):
+            self.init_prometheus_client(app=app)
+
     @staticmethod
     def rewrite_config(app: 'LesoonFlask', rewrite_type: str,
                        config_filename: str, content: str):
@@ -331,9 +334,15 @@ class Bootstrap:
         self.rewrite_config(
             app=app,
             rewrite_type='Apollo',
-            content=yaml.safe_dump(config).replace("'", ''),  #type: ignore
+            content=yaml.safe_dump(config).replace("'", ''),  # type: ignore
             config_filename=config_filename,
         )
+
+    def init_prometheus_client(self, app: 'LesoonFlask'):
+        if os.environ.get('gunicorn_flag', False):
+            from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
+            metrics = GunicornPrometheusMetrics(app)
+            setattr(app, 'metrics', metrics)
 
 
 class LinkTracer:

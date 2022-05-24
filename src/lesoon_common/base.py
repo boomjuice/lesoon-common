@@ -110,7 +110,7 @@ class LesoonFlask(Flask):
 
     # 缓存配置
     # 因为不在app上下文中无法获取app.config，所以此处需要做类属性的冗余
-    cached_config: LesoonConfig = {}
+    cached_config: dict = {}
 
     # json encoder
     json_encoder = LesoonJsonEncoder
@@ -141,7 +141,7 @@ class LesoonFlask(Flask):
             config = config or self.config_path
             self.logger.info(f'开始加载应用配置, 配置对象:{config}')
             self.config.from_object(config)
-            self.__class__.cached_config = self.config
+            self.__class__.cached_config = self.config  # type:ignore
         except Exception as e:
             raise ConfigError(f'加载配置异常:{e}')
 
