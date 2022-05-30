@@ -1,4 +1,9 @@
+import typing as t
+
 from sqlalchemy.engine.default import DefaultExecutionContext
+from sqlalchemy.engine.row import Row
+
+from lesoon_common.utils.base import AttributeDict
 
 
 def get_distribute_id() -> int:
@@ -13,3 +18,7 @@ def get_distribute_id() -> int:
 
 def get_current_id(context: DefaultExecutionContext) -> int:
     return context.get_current_parameters()['id']
+
+
+def row_to_dict(rows: t.List[Row]) -> t.List[AttributeDict]:
+    return [AttributeDict(row._asdict()) for row in rows]

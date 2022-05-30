@@ -205,13 +205,13 @@ class Bootstrap:
             raise RuntimeError(f'必须配置以下sections:{self.fixed_sections}')
 
         path_splitted = app.config_path.replace(':', '.').split('.', 1)
-        self.config_filename, self.config_class = path_splitted  #type:ignore
+        self.config_filename, self.config_class = path_splitted  # type:ignore
 
-        if parser.getboolean('config', 'kubernetes_enabled'):
+        if parser.getboolean('config', 'kubernetes_enabled', fallback=False):
             # 通过k8s读取配置
             self.reload_config_from_configmap(parser=parser, app=app)
 
-        if parser.getboolean('config', 'prometheus_enabled'):
+        if parser.getboolean('config', 'prometheus_enabled', fallback=False):
             self.init_prometheus_client(app=app)
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,

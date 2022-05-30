@@ -32,3 +32,15 @@ def random_alpha_numeric(size: int) -> str:
     return ''.join(
         _random_char_list(size=size,
                           char_set=string.digits + string.ascii_letters))
+
+
+class AttributeDict(dict):
+
+    def __getattr__(self, key):
+        if key in self:
+            return self[key]
+        else:
+            raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
