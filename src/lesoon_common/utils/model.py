@@ -21,4 +21,4 @@ def get_current_id(context: DefaultExecutionContext) -> int:
 
 
 def row_to_dict(rows: t.List[Row]) -> t.List[AttributeDict]:
-    return [AttributeDict(row._asdict()) for row in rows]
+    return [AttributeDict(row._mapping) for row in rows]
