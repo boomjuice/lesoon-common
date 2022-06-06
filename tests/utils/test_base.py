@@ -1,5 +1,6 @@
 import pytest
 
+from lesoon_common.utils.base import AttributeDict
 from lesoon_common.utils.base import generate_id
 
 
@@ -19,3 +20,9 @@ class TestStrUtil:
         for _ in range(10000):
             r_id_set.add(generate_id(20))
         assert len(r_id_set) / 10000 >= 0.999
+
+    def test_attr_dict_standard(self):
+        a = AttributeDict({'id': 1})
+        assert a.id == 1
+        a.b = 2
+        assert a.b == 2

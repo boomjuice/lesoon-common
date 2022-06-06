@@ -208,15 +208,15 @@ class Bootstrap:
         if not all([parser.has_section(sec) for sec in self.FIXED_SECTIONS]):
             raise RuntimeError(f'必须配置以下sections:{self.FIXED_SECTIONS}')
 
-        if parser.getboolean('config', 'kubernetes_enabled'):
+        if parser.getboolean('config', 'kubernetes_enabled', fallback=False):
             # 通过k8s读取配置
             self.reload_config_from_configmap(parser=parser, app=app)
 
-        if parser.getboolean('config', 'apollo_enabled'):
+        if parser.getboolean('config', 'apollo_enabled', fallback=False):
             # 通过apollo读取配置
             self.reload_config_from_apollo(parser=parser, app=app)
 
-        if parser.getboolean('config', 'prometheus_enabled'):
+        if parser.getboolean('config', 'prometheus_enabled', fallback=False):
             self.init_prometheus_client(app=app)
 
     @staticmethod
@@ -240,6 +240,9 @@ class Bootstrap:
         if os.path.exists(success_filename):
             os.remove(success_filename)
         app.__class__.config_path = config_filename
+
+        if parser.getboolean('config', 'prometheus_enabled', fallback=False):
+            self.init_prometheus_client(app=app)
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,
                                      app: 'LesoonFlask'):
@@ -337,6 +340,12 @@ class Bootstrap:
             content=yaml.safe_dump(config).replace("'", ''),  # type: ignore
             config_filename=config_filename,
         )
+
+    def init_prometheus_client(self, app: 'LesoonFlask'):
+        if os.environ.get('gunicorn_flag', False):
+            from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
+            metrics = GunicornPrometheusMetrics(app)
+            setattr(app, 'metrics', metrics)
 
     def init_prometheus_client(self, app: 'LesoonFlask'):
         if os.environ.get('gunicorn_flag', False):

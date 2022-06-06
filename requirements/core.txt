@@ -12,6 +12,7 @@ Flask_RESTful==0.3.9
 Flask_SQLAlchemy==2.5.1
 jaeger_client==4.8.0
 kubernetes==18.20.0
+lesoon_id_center_client==0.0.1
 marshmallow==3.14.0
 marshmallow_dataclass==8.5.3
 marshmallow_enum==1.5.1

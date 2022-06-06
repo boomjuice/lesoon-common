@@ -31,11 +31,11 @@ def mock_alchemy_schema():
 
 
 def mock_get_distribute_id():
-    from lesoon_client import IdCenterClient
+    from lesoon_id_center_client.clients import GeneratorClient
 
     def mock_id(self):
         response = mock.Mock(code=ResponseCode.Success.code,
                              result=generate_id())
         return response
 
-    return mock.patch.object(IdCenterClient, 'get_uid', mock_id)
+    return mock.patch.object(GeneratorClient, 'get_uid', mock_id)
