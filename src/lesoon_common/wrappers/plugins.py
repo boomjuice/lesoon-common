@@ -241,9 +241,6 @@ class Bootstrap:
             os.remove(success_filename)
         app.__class__.config_path = config_filename
 
-        if parser.getboolean('config', 'prometheus_enabled', fallback=False):
-            self.init_prometheus_client(app=app)
-
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,
                                      app: 'LesoonFlask'):
         """
@@ -346,13 +343,6 @@ class Bootstrap:
             from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
             metrics = GunicornPrometheusMetrics(app)
             setattr(app, 'metrics', metrics)
-
-    def init_prometheus_client(self, app: 'LesoonFlask'):
-        if os.environ.get('gunicorn_flag', False):
-            from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
-            metrics = GunicornPrometheusMetrics(app)
-            setattr(app, 'metrics', metrics)
-
 
 class LinkTracer:
     """ 链路跟踪器. """
