@@ -344,6 +344,7 @@ class Bootstrap:
             metrics = GunicornPrometheusMetrics(app)
             setattr(app, 'metrics', metrics)
 
+
 class LinkTracer:
     """ 链路跟踪器. """
 
