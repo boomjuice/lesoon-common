@@ -3,8 +3,10 @@ from collections import Mapping
 
 from lesoon_common.code import ResponseCode
 
+T_co = t.TypeVar('T_co', covariant=True)
 
-class ResponseBase:
+
+class ResponseBase(t.Generic[T_co]):
     """
     提供统一的返回体结构.
 
@@ -75,8 +77,8 @@ class ResponseBase:
         self.flag['retDetail'] = value
 
     @property
-    def result(self):
-        raise NotImplementedError()
+    def result(self) -> T_co:
+        return NotImplementedError()
 
     @result.setter
     def result(self, value: t.Any):
@@ -102,7 +104,7 @@ class ResponseBase:
         return cls(code=code, solution=code.solution, **kwargs).to_dict()
 
 
-class Response(ResponseBase):
+class Response(ResponseBase[T_co]):
     """
     提供统一的外部调用返回体结构.
 
@@ -120,7 +122,7 @@ class Response(ResponseBase):
         super().__init__(code=code, **kwargs)
 
     @property
-    def result(self):
+    def result(self) -> T_co:
         return self.data or self.rows or None
 
     @result.setter
@@ -133,7 +135,7 @@ class Response(ResponseBase):
             self.data = value
 
 
-class ClientResponse(ResponseBase):
+class ClientResponse(ResponseBase[T_co]):
     """
     提供统一的内部调用返回体结构.
 
@@ -149,8 +151,8 @@ class ClientResponse(ResponseBase):
         super().__init__(code=code, **kwargs)
 
     @property
-    def result(self):
-        return self.body or None
+    def result(self) -> T_co:
+        return self.body
 
     @result.setter
     def result(self, value: t.Any):

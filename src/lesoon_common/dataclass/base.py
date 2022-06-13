@@ -3,13 +3,12 @@ from dataclasses import field
 from functools import partial
 
 from marshmallow import Schema
-from marshmallow_dataclass import dataclass
+from marshmallow_dataclass import dataclass as _dataclass
 
 from lesoon_common.schema import CamelSchema
 
 # 覆盖生成的Schema基类为CamelSchema
-dataclass = partial(dataclass, base_schema=CamelSchema)  # type:ignore
-
+dataclass = partial(_dataclass, base_schema=CamelSchema)  # type:ignore
 
 @dataclass
 class BaseDataClass:
