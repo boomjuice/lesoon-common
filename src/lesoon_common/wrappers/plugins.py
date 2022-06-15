@@ -237,8 +237,6 @@ class Bootstrap:
                 app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
         while not os.path.lexists(success_filename):
             continue
-        if os.path.exists(success_filename):
-            os.remove(success_filename)
         app.__class__.config_path = config_filename
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,

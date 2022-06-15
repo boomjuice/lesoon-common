@@ -1,17 +1,18 @@
-import pytest
 import base64
 
-from lesoon_common.utils.safe import base64url_encode
-from lesoon_common.utils.safe import base64url_decode
+import pytest
+
 from lesoon_common.utils.safe import aes_cbc_decrpyt
 from lesoon_common.utils.safe import aes_cbc_encrpyt
+from lesoon_common.utils.safe import base64url_decode
+from lesoon_common.utils.safe import base64url_encode
 
 
 class TestSafeUtil:
     AES_KEY = 'U1NDUxNjQtNDgyMC00NjZiLTlkODgtMm'
 
     def test_base64_crypt(self):
-        assert base64url_decode(base64url_encode('12345')) =='12345'
+        assert base64url_decode(base64url_encode('12345')) == '12345'
 
     def test_aes_encrypt_valid(self):
         with pytest.raises(TypeError):

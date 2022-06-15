@@ -42,7 +42,8 @@ config = _Config()
 
 
 def get_token():
-    token = getattr(_request_ctx_stack.top, 'token', None)
+    token = getattr(_request_ctx_stack.top, 'token', None) or getattr(
+        _app_ctx_stack.top, 'token', None)
     if token is None:
         raise RuntimeError(
             'You must call `@jwt_required()` or `verify_jwt_in_request()` '
@@ -91,7 +92,8 @@ def get_current_user() -> 'TokenUser':
     :return:
         The current user object for the JWT in the current request
     """
-    jwt_user = getattr(_app_ctx_stack.top, 'jwt_user', None)
+    jwt_user = getattr(_request_ctx_stack.top, 'jwt_user', None) or getattr(
+        _app_ctx_stack.top, 'jwt_user', None)
     if jwt_user is None:
         raise RuntimeError(
             'You must call `@jwt_required()` or `verify_jwt_in_request()` '
@@ -101,6 +103,7 @@ def get_current_user() -> 'TokenUser':
 
 def set_current_user(user: 'TokenUser'):
     _app_ctx_stack.top.jwt_user = user
+    _app_ctx_stack.top.token = create_token(user)
 
 
 def _load_user(jwt_header, jwt_data):
@@ -151,14 +154,14 @@ def verify_jwt_in_request(optional=False,
             raise
         _request_ctx_stack.top.jwt = {}
         _request_ctx_stack.top.jwt_header = {}
-        _app_ctx_stack.top.jwt_user = None
+        _request_ctx_stack.top.jwt_user = None
         _request_ctx_stack.top.jwt_location = None
         _request_ctx_stack.top.token = None
         return
 
     # Save these at the very end so that they are only saved in the requet
     # context if the token is valid and all callbacks succeed
-    _app_ctx_stack.top.jwt_user = _load_user(jwt_header, jwt_data)
+    _request_ctx_stack.top.jwt_user = _load_user(jwt_header, jwt_data)
     _request_ctx_stack.top.jwt_header = jwt_header
     _request_ctx_stack.top.jwt = jwt_data
     _request_ctx_stack.top.jwt_location = jwt_location

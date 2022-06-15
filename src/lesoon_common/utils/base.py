@@ -44,3 +44,21 @@ class AttributeDict(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+
+class AttrDefaultDict(AttributeDict):
+
+    def __init__(self,
+                 default_factory: t.Optional[t.Callable] = None,
+                 **kwargs):
+        super().__init__(**kwargs)
+        if default_factory:
+            self.default_factory = default_factory
+        else:
+            self.default_factory = lambda: None
+
+    def __getattr__(self, key):
+        if key in self:
+            return self[key]
+        else:
+            return self.default_factory()

@@ -44,6 +44,9 @@ class ResponseBase(t.Generic[T_co]):
             if v:
                 setattr(self, k, v)
 
+    def __repr__(self):
+        return f'{self.__dict__=}'
+
     @property
     def code(self):
         return self.flag['retCode']
@@ -78,7 +81,7 @@ class ResponseBase(t.Generic[T_co]):
 
     @property
     def result(self) -> T_co:
-        return NotImplementedError()
+        return NotImplementedError()  #type:ignore
 
     @result.setter
     def result(self, value: t.Any):
@@ -123,7 +126,7 @@ class Response(ResponseBase[T_co]):
 
     @property
     def result(self) -> T_co:
-        return self.data or self.rows or None
+        return self.data or self.rows or None  #type:ignore
 
     @result.setter
     def result(self, value: t.Any):
@@ -152,7 +155,7 @@ class ClientResponse(ResponseBase[T_co]):
 
     @property
     def result(self) -> T_co:
-        return self.body
+        return self.body  #type:ignore
 
     @result.setter
     def result(self, value: t.Any):

@@ -10,6 +10,7 @@ from lesoon_common.schema import CamelSchema
 # 覆盖生成的Schema基类为CamelSchema
 dataclass = partial(_dataclass, base_schema=CamelSchema)  # type:ignore
 
+
 @dataclass
 class BaseDataClass:
     Schema: t.ClassVar[t.Type[Schema]] = Schema

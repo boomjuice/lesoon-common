@@ -1,5 +1,6 @@
 import pytest
 
+from lesoon_common.utils.base import AttrDefaultDict
 from lesoon_common.utils.base import AttributeDict
 from lesoon_common.utils.base import generate_id
 
@@ -26,3 +27,11 @@ class TestStrUtil:
         assert a.id == 1
         a.b = 2
         assert a.b == 2
+
+    def test_attr_default_dict(self):
+        a = AttrDefaultDict()
+        assert a.b is None
+        a = AttrDefaultDict(int)
+        assert a.b == 0
+        a = AttrDefaultDict(list)
+        assert isinstance(a.b, list)

@@ -28,6 +28,9 @@ class ServiceError(Exception):
         self.msg = msg or self.code.msg
         self.msg_detail = msg_detail or self.code.msg
 
+    def __repr__(self):
+        return f'{self.code=},{self.msg_detail=}'
+
 
 class RequestError(ServiceError):
     """请求异常"""
