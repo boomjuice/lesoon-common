@@ -34,8 +34,7 @@ class LesoonJwt(JWTManager):
     @staticmethod
     def _set_default_configuration_options(app: Flask):
         app.config.setdefault('JWT_ENABLE', False)
-        app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES',
-                              datetime.timedelta(days=30))
+        app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES', 30 * 24 * 60 * 60)
         app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'token')
         app.config.setdefault('JWT_ACCESS_COOKIE_PATH', '/')
         app.config.setdefault('JWT_ACCESS_CSRF_COOKIE_NAME',
@@ -75,8 +74,7 @@ class LesoonJwt(JWTManager):
         app.config.setdefault('JWT_REFRESH_CSRF_FIELD_NAME', 'csrf_token')
         app.config.setdefault('JWT_REFRESH_CSRF_HEADER_NAME', 'X-CSRF-TOKEN')
         app.config.setdefault('JWT_REFRESH_JSON_KEY', 'refresh_token')
-        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES',
-                              datetime.timedelta(days=30))
+        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES',30 * 24 * 60 * 60)
         app.config.setdefault('JWT_SECRET_KEY', None)
         app.config.setdefault('JWT_SESSION_COOKIE', True)
         app.config.setdefault('JWT_TOKEN_LOCATION',
