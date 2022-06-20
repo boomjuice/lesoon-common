@@ -6,7 +6,6 @@ import typing as t
 
 from flask import current_app
 from flask import Flask
-from flask_restful import Api
 from sqlalchemy.exc import DatabaseError
 from werkzeug.exceptions import HTTPException
 

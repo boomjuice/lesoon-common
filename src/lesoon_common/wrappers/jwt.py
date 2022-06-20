@@ -74,7 +74,7 @@ class LesoonJwt(JWTManager):
         app.config.setdefault('JWT_REFRESH_CSRF_FIELD_NAME', 'csrf_token')
         app.config.setdefault('JWT_REFRESH_CSRF_HEADER_NAME', 'X-CSRF-TOKEN')
         app.config.setdefault('JWT_REFRESH_JSON_KEY', 'refresh_token')
-        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES',30 * 24 * 60 * 60)
+        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES', 30 * 24 * 60 * 60)
         app.config.setdefault('JWT_SECRET_KEY', None)
         app.config.setdefault('JWT_SESSION_COOKIE', True)
         app.config.setdefault('JWT_TOKEN_LOCATION',
