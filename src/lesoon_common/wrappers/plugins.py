@@ -223,20 +223,23 @@ class Bootstrap:
     def rewrite_config(app: 'LesoonFlask', rewrite_type: str,
                        config_filename: str, content: str):
         success_filename = 'config_rewrite.success'
-        if not os.path.exists(success_filename):
-            try:
-                with filelock.FileLock('config.lock', timeout=0):
-                    app.logger.info(f'已获取文件锁,正在从{rewrite_type}中重载配置文件...')
-                    with open(config_filename, mode='w',
-                              encoding='utf-8') as fp:
-                        app.logger.info(
-                            f'正在将{rewrite_type}中配置写入{config_filename}')
-                        fp.write(content)
-                    open(success_filename, 'w').close()
-            except filelock.Timeout:
-                app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
+        try:
+            with filelock.FileLock('config.lock', timeout=0):
+                app.logger.info(f'已获取文件锁,正在从{rewrite_type}中重载配置文件...')
+                with open(config_filename, mode='w', encoding='utf-8') as fp:
+                    app.logger.info(f'正在将{rewrite_type}中配置写入{config_filename}')
+                    fp.write(content)
+                open(success_filename, 'w').close()
+        except filelock.Timeout:
+            app.logger.info('文件锁已被占领, 等待其他进程重载配置文件...')
+        # 其他进程检测是否完成
         while not os.path.lexists(success_filename):
             continue
+        try:
+            with filelock.FileLock('config.lock', timeout=0):
+                os.remove(success_filename)
+        except filelock.Timeout:
+            app.logger.info(f'文件锁已被占领, 等待其他进程删除{success_filename}...')
         app.__class__.config_path = config_filename
 
     def reload_config_from_configmap(self, parser: configparser.ConfigParser,

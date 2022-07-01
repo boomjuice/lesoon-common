@@ -20,11 +20,11 @@ class BaseDataClass:
 
     @classmethod
     def load(cls, data, **kwargs):
-        return cls.Schema().load(data, **kwargs)
+        return cls.Schema(**kwargs).load(data)
 
     @classmethod
     def dump(cls, data, **kwargs):
-        return cls.Schema().dump(data, **kwargs)
+        return cls.Schema(**kwargs).dump(data)
 
     def json(self, **kwargs):
-        return self.Schema().dump(self, **kwargs)
+        return self.Schema(**kwargs).dump(self)

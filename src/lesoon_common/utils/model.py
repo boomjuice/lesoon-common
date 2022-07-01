@@ -3,20 +3,28 @@ import typing as t
 from sqlalchemy.engine.default import DefaultExecutionContext
 from sqlalchemy.engine.row import Row
 
+from lesoon_common import current_app
+from lesoon_common import ServiceError
 from lesoon_common.utils.base import AttributeDict
 
 if t.TYPE_CHECKING:
     from lesoon_common.model import BaseModel
 
+_id_cache: t.List[str] = []
 
-def get_distribute_id() -> int:
+
+def get_distribute_id() -> str:
     """
     获取分布式id.
     注意：id均由分布式id中心提供
     """
-    from lesoon_id_center_client.clients import GeneratorClient
-    generator_client = GeneratorClient()
-    return generator_client.get_uid().result
+    global _id_cache
+    if not _id_cache:
+        from lesoon_id_center_client.clients import GeneratorClient
+        uid_list = GeneratorClient().batch_get_uid(count=current_app.config.get(
+            'DISTRIBUTE_ID_CACHE_SIZE', 100)).result
+        _id_cache.extend(uid_list)
+    return _id_cache.pop()
 
 
 def get_current_id(context: DefaultExecutionContext) -> int:

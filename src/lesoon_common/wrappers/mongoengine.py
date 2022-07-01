@@ -35,11 +35,13 @@ class LesoonQuerySet(BaseQuerySet):
 
 
 if not util.find_spec('pymongo'):
-    CommandLogger = None
+
+    class CommandLogger:
+        pass
 else:
     from pymongo.monitoring import CommandListener
 
-    class CommandLogger(CommandListener):
+    class CommandLogger(CommandListener):  # type:ignore
 
         def started(self, event):
             current_app.logger.debug('Command {0.command_name} with request id '

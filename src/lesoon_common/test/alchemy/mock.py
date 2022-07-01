@@ -33,9 +33,9 @@ def mock_alchemy_schema():
 def mock_get_distribute_id():
     from lesoon_id_center_client.clients import GeneratorClient
 
-    def mock_id(self):
+    def mock_id(self, count: int):
         response = mock.Mock(code=ResponseCode.Success.code,
-                             result=generate_id())
+                             result=[generate_id() for _ in range(count)])
         return response
 
-    return mock.patch.object(GeneratorClient, 'get_uid', mock_id)
+    return mock.patch.object(GeneratorClient, 'batch_get_uid', mock_id)
