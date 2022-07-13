@@ -38,11 +38,9 @@ class ResponseBase(t.Generic[T_co]):
         self.flag: t.Dict[str, str] = dict()
         self.code = code.code
         self.msg = code.msg
-        self.total = 0
 
         for k, v in kwargs.items():
-            if v:
-                setattr(self, k, v)
+            setattr(self, k, v)
 
     def __repr__(self):
         return f'{self.__dict__=}'
@@ -88,12 +86,19 @@ class ResponseBase(t.Generic[T_co]):
         raise NotImplementedError()
 
     def to_dict(self) -> dict:
-        return {k: v for k, v in self.__dict__.items() if v}
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
     @classmethod
-    def success(cls, result: t.Any = None, **kwargs) -> dict:
-        resp = cls(code=ResponseCode.Success, result=result, **kwargs)
-        return resp.to_dict()
+    def success(cls,
+                result: t.Any = None,
+                code: t.Union[ResponseCode, str] = ResponseCode.Success,
+                **kwargs) -> dict:
+        if isinstance(code, str):
+            if ResponseCode.is_exist(code):
+                code = ResponseCode(code)  # type:ignore[call-arg]
+            else:
+                code = ResponseCode.Success
+        return cls(code=code, result=result, **kwargs).to_dict()
 
     @classmethod
     def error(cls,
@@ -120,8 +125,9 @@ class Response(ResponseBase[T_co]):
     """
 
     def __init__(self, code: ResponseCode, **kwargs):
-        self.data: t.Dict[str, t.Any] = dict()
-        self.rows: t.List[dict] = list()
+        self.data: t.Optional[t.Dict[str, t.Any]] = None
+        self.rows: t.Optional[t.List[dict]] = None
+        self.total: t.Optional[int] = None
         super().__init__(code=code, **kwargs)
 
     @property
